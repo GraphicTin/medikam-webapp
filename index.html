@@ -38,15 +38,12 @@
 const SERVICE_UUID = "4faac861-11a1-11ee-be56-0242ac120002";
 const CHARACTERISTIC_UUID = "4faac862-11a1-11ee-be56-0242ac120002";
 
-// Shared function to handle fast connection matrix
+// Shared function to handle fast pairing and connection handshakes
 async function getBLECharacteristic() {
-    console.log('Opening fast scanner window...');
     const device = await navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
         optionalServices: [SERVICE_UUID] 
     });
-    
-    console.log('Connecting to GATT...');
     const server = await device.gatt.connect();
     const service = await server.getPrimaryService(SERVICE_UUID);
     const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
@@ -61,7 +58,6 @@ async function sendCredentials() {
     
     try {
         const { characteristic, device } = await getBLECharacteristic();
-        
         const encoder = new TextEncoder();
         const payload = encoder.encode(`${ssid},${pass}`);
         
@@ -78,7 +74,6 @@ async function triggerDeepSleep() {
 
     try {
         const { characteristic, device } = await getBLECharacteristic();
-        
         const encoder = new TextEncoder();
         const payload = encoder.encode("DEEPSLEEP");
         
