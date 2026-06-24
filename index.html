@@ -37,12 +37,11 @@
 const SERVICE_UUID = "4faac861-11a1-11ee-be56-0242ac120002";
 const CHARACTERISTIC_UUID = "4faac862-11a1-11ee-be56-0242ac120002";
 
-// Shared function using FAST scanning logic
+// Shared function using your preferred OLD strict service filtering logic
 async function getBLECharacteristic() {
-    console.log('Opening instant scan...');
+    console.log('Opening strict filter scan...');
     const device = await navigator.bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: [SERVICE_UUID] 
+        filters: [{ services: [SERVICE_UUID] }] // Old finding filter style
     });
     
     console.log('Connecting...');
