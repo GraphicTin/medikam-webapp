@@ -6,83 +6,47 @@
     <style>
         body { font-family: -apple-system, sans-serif; padding: 20px; background: #f4f4f9; color: #333; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto 20px auto; }
-        input { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        .battery-box { display: flex; align-items: center; justify-content: space-between; background: #e9e9eb; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; }
+        .battery-level { color: #34c759; }
         button { width: 100%; padding: 12px; background: #007aff; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; }
-        button:active { background: #0056b3; }
-        .btn-danger { background: #ff3b30; }
-        .btn-danger:active { background: #c32720; }
-        h3 { margin-top: 0; color: #555; }
+        .btn-warn { background: #ff9500; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>ESP32-CAM Wi-Fi Setup</h2>
-    <label>Wi-Fi SSID</label>
-    <input type="text" id="ssid" placeholder="e.g. MyHomeNetwork">
+    <div class="battery-box">
+        <span>Estimated Battery Status:</span>
+        <span class="battery-level" id="bat-val">100% (USB Powered)</span>
+    </div>
     
-    <label>Wi-Fi Password</label>
-    <input type="password" id="password" placeholder="e.g. SecretPass123">
-    
-    <button onclick="sendCredentials()">Connect & Save to SD</button>
-</div>
-
-<div class="card">
-    <h3>Debug Features</h3>
-    <p style="font-size: 14px; color: #666;">Warning: Deep sleep turns off Bluetooth. Press the hardware RESET button on the board to wake it up later.</p>
-    <button class="btn-danger" onclick="triggerDeepSleep()">Enter Deep Sleep Mode</button>
+    <h2>ESP32-CAM Control</h2>
+    <button onclick="triggerLightSleep()" class="btn-warn">Enter Light Sleep Mode</button>
 </div>
 
 <script>
 const SERVICE_UUID = "4faac861-11a1-11ee-be56-0242ac120002";
 const CHARACTERISTIC_UUID = "4faac862-11a1-11ee-be56-0242ac120002";
 
-// Shared function using your preferred OLD strict service filtering logic
-async function getBLECharacteristic() {
-    console.log('Opening strict filter scan...');
+async function sendCommand(payloadString) {
     const device = await navigator.bluetooth.requestDevice({
-        filters: [{ services: [SERVICE_UUID] }] // Old finding filter style
+        filters: [{ services: [SERVICE_UUID] }]
     });
-    
-    console.log('Connecting...');
     const server = await device.gatt.connect();
     const service = await server.getPrimaryService(SERVICE_UUID);
     const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
-    return { characteristic, device };
+    
+    const encoder = new TextEncoder();
+    await characteristic.writeValue(encoder.encode(payloadString));
+    await device.gatt.disconnect();
 }
 
-async function sendCredentials() {
-    const ssid = document.getElementById('ssid').value;
-    const pass = document.getElementById('password').value;
-    
-    if(!ssid || !pass) { alert('Please enter both SSID and Password.'); return; }
-    
+async function triggerLightSleep() {
     try {
-        const { characteristic, device } = await getBLECharacteristic();
-        const encoder = new TextEncoder();
-        const payload = encoder.encode(`${ssid},${pass}`);
-        
-        await characteristic.writeValue(payload);
-        alert('Config sent successfully!');
-        await device.gatt.disconnect();
+        await sendCommand("LIGHTSLEEP");
+        alert('Light Sleep command sent! Device will wake up automatically in 30 seconds.');
     } catch (error) {
-        alert('Web Bluetooth Error: ' + error);
-    }
-}
-
-async function triggerDeepSleep() {
-    if(!confirm("Are you sure you want to put the device into deep sleep?")) return;
-
-    try {
-        const { characteristic, device } = await getBLECharacteristic();
-        const encoder = new TextEncoder();
-        const payload = encoder.encode("DEEPSLEEP");
-        
-        await characteristic.writeValue(payload);
-        alert('Deep Sleep command sent!');
-        await device.gatt.disconnect();
-    } catch (error) {
-        alert('Web Bluetooth Error: ' + error);
+        alert('Error: ' + error);
     }
 }
 </script>
