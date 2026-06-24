@@ -36,7 +36,7 @@
 
 <script>
 const SERVICE_UUID = "4faac861-11a1-11ee-be56-0242ac120002";
-const CHARACTERISTIC_UUID "4faac862-11a1-11ee-be56-0242ac120002";
+const CHARACTERISTIC_UUID = "4faac862-11a1-11ee-be56-0242ac120002"; // Fixed missing colon here
 
 async function getBLECharacteristic() {
     const device = await navigator.bluetooth.requestDevice({
@@ -45,7 +45,8 @@ async function getBLECharacteristic() {
     });
     const server = await device.gatt.connect();
     const service = await server.getPrimaryService(SERVICE_UUID);
-    return { characteristic: await service.getCharacteristic(CHARACTERISTIC_UUID), device };
+    const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+    return { characteristic, device };
 }
 
 async function sendCredentials() {
