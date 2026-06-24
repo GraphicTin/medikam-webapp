@@ -35,16 +35,22 @@ async function sendCredentials() {
     if(!ssid || !pass) { alert('Please enter both SSID and Password.'); return; }
     
     try {
-        // Request browser's native BLE scanner popup
+        console.log('Requesting all nearby Bluetooth Devices...');
+        // FAST SCAN METHOD: Accept all devices, but declare the service we need to interact with
         const device = await navigator.bluetooth.requestDevice({
-            filters: [{ services: [SERVICE_UUID] }]
+            acceptAllDevices: true,
+            optionalServices: [SERVICE_UUID] 
         });
         
+        console.log('Connecting to GATT Server...');
         const server = await device.gatt.connect();
+        
+        console.log('Accessing Service...');
         const service = await server.getPrimaryService(SERVICE_UUID);
+        
+        console.log('Accessing Characteristic...');
         const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
         
-        // Format payload as plain CSV string: "SSID,PASSWORD"
         const encoder = new TextEncoder();
         const payload = encoder.encode(`${ssid},${pass}`);
         
