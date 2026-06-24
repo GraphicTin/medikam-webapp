@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP32-CAM Configurator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: -apple-system, sans-serif; padding: 20px; background: #f4f4f9; color: #333; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; }
+        input { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        button { width: 100%; padding: 12px; background: #007aff; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        button:active { background: #0056b3; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>ESP32-CAM Wi-Fi Setup</h2>
+    <label>Wi-Fi SSID</label>
+    <input type="text" id="ssid" placeholder="e.g. MyHomeNetwork">
+    
+    <label>Wi-Fi Password</label>
+    <input type="password" id="password" placeholder="e.g. SecretPass123">
+    
+    <button onclick="sendCredentials()">Connect & Save to SD</button>
+</div>
+
+<script>
+const SERVICE_UUID = "4faac861-11a1-11ee-be56-0242ac120002";
+const CHARACTERISTIC_UUID = "4faac862-11a1-11ee-be56-0242ac120002";
+
+async function sendCredentials() {
+    const ssid = document.getElementById('ssid').value;
+    const pass = document.getElementById('password').value;
+    
+    if(!ssid || !pass) { alert('Please enter both SSID and Password.'); return; }
+    
+    try {
+        // Request browser's native BLE scanner popup
+        const device = await navigator.bluetooth.requestDevice({
+            filters: [{ services: [SERVICE_UUID] }]
+        });
+        
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService(SERVICE_UUID);
+        const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+        
+        // Format payload as plain CSV string: "SSID,PASSWORD"
+        const encoder = new TextEncoder();
+        const payload = encoder.encode(`${ssid},${pass}`);
+        
+        await characteristic.writeValue(payload);
+        alert('Config sent successfully! Check your ESP32 Serial Monitor.');
+        
+        await device.gatt.disconnect();
+    } catch (error) {
+        alert('Web Bluetooth Error: ' + error);
+    }
+}
+</script>
+</body>
+</html>
