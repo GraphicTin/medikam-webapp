@@ -11,7 +11,6 @@
         button:active { background: #0056b3; }
         .btn-danger { background: #ff3b30; }
         .btn-danger:active { background: #c32720; }
-        hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
         h3 { margin-top: 0; color: #555; }
     </style>
 </head>
@@ -30,7 +29,7 @@
 
 <div class="card">
     <h3>Debug Features</h3>
-    <p style="font-size: 14px; color: #666;">Warning: Putting the ESP32 into deep sleep will disconnect Bluetooth. Press the physical RESET button on the board to wake it up.</p>
+    <p style="font-size: 14px; color: #666;">Warning: Deep sleep turns off Bluetooth. Press the hardware RESET button on the board to wake it up later.</p>
     <button class="btn-danger" onclick="triggerDeepSleep()">Enter Deep Sleep Mode</button>
 </div>
 
@@ -38,12 +37,15 @@
 const SERVICE_UUID = "4faac861-11a1-11ee-be56-0242ac120002";
 const CHARACTERISTIC_UUID = "4faac862-11a1-11ee-be56-0242ac120002";
 
-// Shared function to handle fast pairing and connection handshakes
+// Shared function using FAST scanning logic
 async function getBLECharacteristic() {
+    console.log('Opening instant scan...');
     const device = await navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
         optionalServices: [SERVICE_UUID] 
     });
+    
+    console.log('Connecting...');
     const server = await device.gatt.connect();
     const service = await server.getPrimaryService(SERVICE_UUID);
     const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
@@ -78,7 +80,7 @@ async function triggerDeepSleep() {
         const payload = encoder.encode("DEEPSLEEP");
         
         await characteristic.writeValue(payload);
-        alert('Deep Sleep command sent! Device is now shutting down.');
+        alert('Deep Sleep command sent!');
         await device.gatt.disconnect();
     } catch (error) {
         alert('Web Bluetooth Error: ' + error);
