@@ -52,8 +52,6 @@ function clearLog() {
     document.getElementById('consoleLog').innerHTML = '';
 }
 
-let savedDeviceId = localStorage.getItem('esp32_device_id');
-
 async function sendCredentials() {
     const ssid = document.getElementById('ssid').value;
     const pass = document.getElementById('password').value;
@@ -64,36 +62,42 @@ async function sendCredentials() {
     }
     
     log('Scanning for ESP32-CAM (Polling window active)...');
+    let device = null;
+    let server = null;
+    let savedDeviceId = localStorage.getItem('esp32_device_id');
+
     try {
+        // 1. Try background auto-reconnect first if profile exists
         if (savedDeviceId) {
             log("Found saved profile. Attempting background re-entry...");
-            // Web Bluetooth allows direct connection if permission was previously granted
-            const device = await navigator.bluetooth.getDevices();
-            const target = device.find(d => d.id === savedDeviceId);
+            const devices = await navigator.bluetooth.getDevices();
+            device = devices.find(d => d.id === savedDeviceId);
             
-            if (target) {
-                const server = await target.gatt.connect();
+            if (device) {
+                log("Saved target located. Connecting...");
+                server = await device.gatt.connect();
                 log("Background handshake complete!");
-                return server;
             }
         }
         
-        const device = await navigator.bluetooth.requestDevice({
-            filters: [{ services: [SERVICE_UUID] }]
-        });
+        // 2. Fall back to manual picker ui window if auto-reconnect missed
+        if (!server) {
+            log("No cached link available. Requesting device interface manual picker...");
+            device = await navigator.bluetooth.requestDevice({
+                filters: [{ services: [SERVICE_UUID] }]
+            });
+            localStorage.setItem('esp32_device_id', device.id);
+            log(`Paired new target: ${device.name || device.id}. Connecting...`);
+            server = await device.gatt.connect();
+        }
 
-        localStorage.setItem('esp32_device_id', device.id);
-        
-        log(`Found device: ${device.name || device.id}. Connecting...`);
-        
-        // Listen for sudden disconnections (e.g., if ESP32 deep sleep window times out)
+        // 3. Register disconnection handler
         device.addEventListener('gattserverdisconnected', () => {
             log('Target device disconnected unexpectedly.', 'error');
         });
 
-        const server = await device.gatt.connect();
+        // 4. Locate profile services and transmit
         log('GATT Server connected. Locating services...');
-        
         const service = await server.getPrimaryService(SERVICE_UUID);
         const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
         log('Characteristic verified. Encoding payload...');
