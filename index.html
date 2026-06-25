@@ -27,7 +27,7 @@
             overflow: hidden;
             padding: 8px;
         }
-        .workspace { display: flex; flex: 1; gap: 8px; min-height: 0; }
+        .workspace { display: flex; flex: 1; gap: 8px; min-height: 0; position: relative; }
         .control-panel {
             width: 400px;
             background: var(--panel);
@@ -37,6 +37,7 @@
             padding: 16px;
             gap: 14px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            position: relative;
         }
         .monitor-panel {
             flex: 1;
@@ -74,12 +75,13 @@
             border-radius: 4px;
             border: none;
             color: #ffffff;
-            transition: background 0.1s;
+            transition: background 0.1s, opacity 0.1s;
         }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-primary { background: var(--accent); }
-        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
         .btn-alt { background: var(--accent-alt); }
-        .btn-alt:hover { background: var(--accent-alt-hover); }
+        .btn-alt:hover:not(:disabled) { background: var(--accent-alt-hover); }
         .terminal-header {
             background: #f8fafc;
             border-bottom: 1px solid var(--border);
@@ -99,12 +101,40 @@
         }
         .clear-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 2px 8px; font-size: 11px; border-radius: 3px; width: auto; }
         .clear-btn:hover { border-color: var(--text); color: var(--text); }
+
+        /* Asynchronous Pipeline Overlay Lock Screen */
+        .pipeline-lock-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.15);
+            backdrop-filter: blur(2px);
+            z-index: 50;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+        .spinner-box {
+            background: #0f172a;
+            color: #38bdf8;
+            padding: 16px 24px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border: 1px solid #334155;
+            letter-spacing: 0.5px;
+        }
     </style>
 </head>
 <body>
 
 <div class="workspace">
-    <div class="control-panel">
+    <div class="pipeline-lock-overlay" id="pipelineLock">
+        <div class="spinner-box">PROCEEDING WIRELESS HANDSHAKE...</div>
+    </div>
+
+    <div class="control-panel" id="inputContainer">
         <h2>System Parameters Matrix</h2>
         
         <div class="form-row">
@@ -139,8 +169,8 @@
         </div>
         
         <div class="button-group">
-            <button class="btn-primary" onclick="sendCredentials()">Transmit Config</button>
-            <button class="btn-alt" onclick="triggerHardwareLineNotify()">Hardware Test</button>
+            <button class="btn-primary" id="btnTx" onclick="sendCredentials()">Transmit Config</button>
+            <button class="btn-alt" id="btnTest" onclick="triggerHardwareLineNotify()">Hardware Test</button>
         </div>
     </div>
 
@@ -174,8 +204,27 @@ function log(message, type = 'info') {
 
 function clearLog() { document.getElementById('consoleLog').innerHTML = ''; }
 
+function setInterfaceLock(isLocked) {
+    const overlay = document.getElementById('pipelineLock');
+    const btnTx = document.getElementById('btnTx');
+    const btnTest = document.getElementById('btnTest');
+    
+    if (isLocked) {
+        overlay.style.display = 'flex';
+        btnTx.disabled = true;
+        btnTest.disabled = true;
+    } else {
+        overlay.style.display = 'none';
+        btnTx.disabled = false;
+        btnTest.disabled = false;
+    }
+}
+
 async function executeBleTransaction(characteristicUuid, payloadString, completionMessage) {
+    // Engaging strict pipeline debounce lockout boundary
+    setInterfaceLock(true);
     log('Scanning host wireless adapters for advertising target...');
+    
     try {
         const device = await navigator.bluetooth.requestDevice({
             filters: [{ services: [SERVICE_UUID] }]
@@ -198,15 +247,17 @@ async function executeBleTransaction(characteristicUuid, payloadString, completi
         
         log(completionMessage, 'success');
         
-        // CRITICAL FIX: Unbind the listener BEFORE triggering disconnect to kill the false [ERR] logs
         device.removeEventListener('gattserverdisconnected', disconnectHandler);
-        
         await device.gatt.disconnect();
         log('Session closed cleanly.');
     } catch (error) {
         log(`Pipeline exception error: ${error.message}`, 'error');
+    } finally {
+        // Disengaging pipeline boundary tracking lock
+        setInterfaceLock(false);
     }
 }
+
 function sendCredentials() {
     const ssid = document.getElementById('ssid').value;
     const pass = document.getElementById('password').value;
@@ -220,7 +271,6 @@ function sendCredentials() {
 }
 
 function triggerHardwareLineNotify() {
-    // Sends a direct trigger character string ("1") to the test register
     executeBleTransaction(TRIGGER_CHAR_UUID, "1", 'Hardware alert pipeline execution command issued.');
 }
 
