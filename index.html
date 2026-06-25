@@ -1,160 +1,160 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ESP32-CAM Configurator</title>
+    <title>ESP32-CAM Control Terminal</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --accent: #3b82f6;
-            --accent-hover: #2563eb;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --border: #334155;
+            --bg: #0b0f19;
+            --panel: #131c2e;
+            --border: #22314d;
+            --text: #e2e8f0;
+            --text-muted: #64748b;
+            --accent: #2563eb;
+            --accent-success: #16a34a;
         }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            padding: 16px; 
-            background: var(--bg-color); 
-            color: var(--text-main);
-            margin: 0;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; 
+            background: var(--bg); 
+            color: var(--text); 
+            height: 100vh;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            overflow: hidden;
+            padding: 8px;
         }
-        .container {
-            width: 100%;
-            max-width: 480px;
+        
+        /* Master Console Layout */
+        .workspace {
+            display: flex;
+            flex: 1;
+            gap: 8px;
+            min-height: 0;
         }
-        .card { 
-            background: var(--card-bg); 
-            padding: 20px; 
-            border-radius: 8px; 
+        
+        /* Left Controller Column */
+        .control-panel {
+            width: 400px;
+            background: var(--panel);
             border: 1px solid var(--border);
-            margin-bottom: 16px; 
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            gap: 16px;
         }
-        h2, h3 { margin-top: 0; margin-bottom: 16px; font-weight: 600; font-size: 18px; color: var(--text-main); }
-        .grid {
+        
+        /* Right Monitor Column */
+        .monitor-panel {
+            flex: 1;
+            background: #05070f;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        h2 { font-size: 14px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 12px;
+            gap: 8px;
         }
-        .field {
-            display: flex;
-            flex-direction: column;
-            margin-bottom: 12px;
+        
+        label { font-size: 11px; color: var(--text-muted); font-weight: bold; }
+        input, textarea {
+            background: #070a12;
+            border: 1px solid var(--border);
+            color: #4ade80;
+            padding: 8px;
+            font-family: inherit;
+            font-size: 13px;
+            border-radius: 2px;
+            width: 100%;
         }
-        .field.full {
-            grid-column: span 2;
+        input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+        textarea { resize: none; flex: 1; min-height: 80px; }
+
+        button {
+            background: var(--accent);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: background 0.1s;
         }
-        label { 
-            font-size: 12px; 
-            text-transform: uppercase; 
-            letter-spacing: 0.05em; 
-            color: var(--text-muted); 
-            margin-bottom: 6px; 
-        }
-        input, textarea { 
-            width: 100%; 
-            padding: 10px; 
-            box-sizing: border-box; 
-            background: var(--bg-color);
-            border: 1px solid var(--border); 
-            border-radius: 4px; 
-            font-size: 14px; 
-            color: var(--text-main);
-        }
-        input:focus, textarea:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-        textarea { resize: vertical; min-height: 60px; font-family: inherit; }
-        button { 
-            width: 100%; 
-            padding: 12px; 
-            background: var(--accent); 
-            color: white; 
-            border: none; 
-            border-radius: 4px; 
-            font-weight: 600; 
-            font-size: 14px; 
-            cursor: pointer; 
-            transition: background 0.15s ease;
-        }
-        button:hover { background: var(--accent-hover); }
-        .console-header {
+        button:hover { background: #1d4ed8; }
+        
+        /* Console Logs Window */
+        .terminal-header {
+            background: var(--panel);
+            border-bottom: 1px solid var(--border);
+            padding: 8px 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
         }
-        .console-header h3 { margin: 0; }
-        .btn-clear {
-            width: auto;
-            padding: 4px 10px;
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-muted);
-            font-size: 12px;
+        .terminal-log {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.6;
         }
-        .btn-clear:hover { background: rgba(255,255,255,0.05); border-color: var(--text-muted); }
-        .console-box { 
-            background: #020617; 
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; 
-            padding: 12px; 
-            border-radius: 4px; 
-            height: 200px; 
-            overflow-y: auto; 
-            font-size: 12px; 
-            border: 1px solid var(--border);
-            line-height: 1.5;
-        }
+        .clear-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 2px 8px; font-size: 11px; }
+        .clear-btn:hover { border-color: var(--text); color: var(--text); }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="card">
-        <h2>System Provisioning</h2>
+<div class="workspace">
+    <div class="control-panel">
+        <h2>System Parameters Matrix</h2>
         
-        <div class="grid">
-            <div class="field">
-                <label>Wi-Fi SSID</label>
-                <input type="text" id="ssid" placeholder="Network Name">
+        <div class="form-row">
+            <div class="form-group">
+                <label>[NET_SSID]</label>
+                <input type="text" id="ssid" autocomplete="off">
             </div>
-            
-            <div class="field">
-                <label>Wi-Fi Password</label>
-                <input type="password" id="password" placeholder="Credentials">
+            <div class="form-group">
+                <label>[NET_PASS]</label>
+                <input type="password" id="password">
             </div>
         </div>
 
-        <div class="field">
-            <label>LINE Token</label>
-            <input type="password" id="token" placeholder="Bearer Token">
+        <div class="form-group">
+            <label>[LINE_API_BEARER_TOKEN]</label>
+            <input type="password" id="token">
         </div>
 
-        <div class="field">
-            <label>LINE Target User ID</label>
-            <input type="text" id="user_id" placeholder="Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+        <div class="form-group">
+            <label>[LINE_TARGET_UUID]</label>
+            <input type="text" id="user_id" autocomplete="off">
         </div>
 
-        <div class="field">
-            <label>Alert Message</label>
-            <textarea id="message" placeholder="Payload text to dispatch..."></textarea>
+        <div class="form-group" style="flex: 1;">
+            <label>[RAW_DATA_MESSAGE_STRING]</label>
+            <textarea id="message"></textarea>
         </div>
         
-        <button onclick="sendCredentials()">Transmit System Payload</button>
+        <button onclick="sendCredentials()">Execute Transmission Pipeline</button>
     </div>
 
-    <div class="card">
-        <div class="console-header">
-            <h3>Diagnostic Interface</h3>
-            <button class="btn-clear" onclick="clearLog()">Clear</button>
+    <div class="monitor-panel">
+        <div class="terminal-header">
+            <h2>Live Output Monitor</h2>
+            <button class="clear-btn" onclick="clearLog()">Clear Buffer</button>
         </div>
-        <div class="console-box" id="consoleLog"></div>
+        <div class="terminal-log" id="consoleLog"></div>
     </div>
 </div>
 
@@ -165,13 +165,15 @@ const CHARACTERISTIC_UUID = "4faac862-11a1-11ee-be56-0242ac120002";
 function log(message, type = 'info') {
     const consoleBox = document.getElementById('consoleLog');
     const timestamp = new Date().toLocaleTimeString();
-    let color = '#38bdf8'; // Info/Link color
-    if (type === 'error') color = '#f87171';
-    if (type === 'warn') color = '#fbbf24';
+    let prefix = '>> ';
+    let color = '#e2e8f0';
     
-    consoleBox.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span><br/>`;
+    if (type === 'error') { color = '#f87171'; prefix = '[ERR] '; }
+    if (type === 'warn') { color = '#fbbf24'; prefix = '[WRN] '; }
+    if (type === 'success') { color = '#4ade80'; prefix = '[OK ] '; }
+    
+    consoleBox.innerHTML += `<span style="color: ${color}">${timestamp} ${prefix}${message}</span><br/>`;
     consoleBox.scrollTop = consoleBox.scrollHeight;
-    console.log(`[BLE] ${message}`);
 }
 
 function clearLog() {
@@ -186,46 +188,45 @@ async function sendCredentials() {
     const msg = document.getElementById('message').value;
     
     if(!ssid || !pass || !token || !userId || !msg) { 
-        log('Aborted: All dataset vectors must be filled.', 'warn');
+        log('Data packet injection aborted: Missing parameters within dataset fields.', 'warn');
         return; 
     }
     
-    log('Scanning for ESP32-CAM advertising interval...');
+    log('Scanning host wireless adapters for advertising target UUID...');
     try {
         const device = await navigator.bluetooth.requestDevice({
             filters: [{ services: [SERVICE_UUID] }]
         });
         
-        log(`Target matched: ${device.id}. Handshaking...`);
+        log(`Target verification matched: ID: ${device.id}. Initializing session handshake.`);
         
         device.addEventListener('gattserverdisconnected', () => {
-            log('Link terminated by hardware window boundary.', 'error');
+            log('Hardware loop sequence termination: Link dropped.', 'error');
         });
 
         const server = await device.gatt.connect();
-        log('GATT peripheral connected. Querying configuration descriptors...');
+        log('GATT interface linked. Polling peripheral descriptors...');
         
         const service = await server.getPrimaryService(SERVICE_UUID);
         const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
         
-        // CSV encoding sequence matching the hardware delimiter parser logic
         const rawString = `${ssid},${pass},${token},${userId},${msg}`;
         const encoder = new TextEncoder();
         const payload = encoder.encode(rawString);
         
-        log(`Streaming raw string data array payload (${payload.length} bytes)...`);
+        log(`Streaming dataset array to target characteristic register (${payload.length} bytes)...`);
         await characteristic.writeValue(payload);
         
-        log('Transmission successfully acknowledged by host NVRAM!', 'info');
+        log('Data transmission complete. Payload verified.', 'success');
         await device.gatt.disconnect();
-        log('Session closed cleanly.');
+        log('Session terminated cleanly. Device returned to operational state.');
         
     } catch (error) {
-        log(`Runtime Exception: ${error.message}`, 'error');
+        log(`Pipeline exception error: ${error.message}`, 'error');
     }
 }
     
-log('Diagnostic pipeline active. Core operational.');
+log('Terminal sequence active. Monitoring pipeline ready.');
 </script>
 </body>
 </html>
