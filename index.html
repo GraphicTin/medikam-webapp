@@ -62,42 +62,22 @@ async function sendCredentials() {
     }
     
     log('Scanning for ESP32-CAM (Polling window active)...');
-    let device = null;
-    let server = null;
-    let savedDeviceId = localStorage.getItem('esp32_device_id');
 
     try {
-        // 1. Try background auto-reconnect first if profile exists
-        if (savedDeviceId) {
-            log("Found saved profile. Attempting background re-entry...");
-            const devices = await navigator.bluetooth.getDevices();
-            device = devices.find(d => d.id === savedDeviceId);
-            
-            if (device) {
-                log("Saved target located. Connecting...");
-                server = await device.gatt.connect();
-                log("Background handshake complete!");
-            }
-        }
+        // Standard Web Bluetooth API implementation requiring manual user choice
+        const device = await navigator.bluetooth.requestDevice({
+            filters: [{ services: [SERVICE_UUID] }]
+        });
         
-        // 2. Fall back to manual picker ui window if auto-reconnect missed
-        if (!server) {
-            log("No cached link available. Requesting device interface manual picker...");
-            device = await navigator.bluetooth.requestDevice({
-                filters: [{ services: [SERVICE_UUID] }]
-            });
-            localStorage.setItem('esp32_device_id', device.id);
-            log(`Paired new target: ${device.name || device.id}. Connecting...`);
-            server = await device.gatt.connect();
-        }
-
-        // 3. Register disconnection handler
+        log(`Paired target: ${device.name || device.id}. Connecting...`);
+        
         device.addEventListener('gattserverdisconnected', () => {
             log('Target device disconnected unexpectedly.', 'error');
         });
 
-        // 4. Locate profile services and transmit
+        const server = await device.gatt.connect();
         log('GATT Server connected. Locating services...');
+        
         const service = await server.getPrimaryService(SERVICE_UUID);
         const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
         log('Characteristic verified. Encoding payload...');
