@@ -52,6 +52,8 @@ function clearLog() {
     document.getElementById('consoleLog').innerHTML = '';
 }
 
+let savedDeviceId = localStorage.getItem('esp32_device_id');
+
 async function sendCredentials() {
     const ssid = document.getElementById('ssid').value;
     const pass = document.getElementById('password').value;
@@ -63,9 +65,24 @@ async function sendCredentials() {
     
     log('Scanning for ESP32-CAM (Polling window active)...');
     try {
+        if (savedDeviceId) {
+            log("Found saved profile. Attempting background re-entry...");
+            // Web Bluetooth allows direct connection if permission was previously granted
+            const device = await navigator.bluetooth.getDevices();
+            const target = device.find(d => d.id === savedDeviceId);
+            
+            if (target) {
+                const server = await target.gatt.connect();
+                log("Background handshake complete!");
+                return server;
+            }
+        }
+        
         const device = await navigator.bluetooth.requestDevice({
             filters: [{ services: [SERVICE_UUID] }]
         });
+
+        localStorage.setItem('esp32_device_id', device.id);
         
         log(`Found device: ${device.name || device.id}. Connecting...`);
         
@@ -95,9 +112,9 @@ async function sendCredentials() {
         log(`BLE Exception: ${error.message}`, 'error');
     }
 }
-
-// Initial system print
+    
 log('Web Terminal initialized. Ready to interface.');
+
 </script>
 </body>
 </html>
