@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         :root {
-            --bg: #0b0f19;
-            --panel: #131c2e;
-            --border: #22314d;
-            --text: #e2e8f0;
+            --bg: #f1f5f9;
+            --panel: #ffffff;
+            --border: #cbd5e1;
+            --text: #0f172a;
             --text-muted: #64748b;
             --accent: #2563eb;
-            --accent-success: #16a34a;
+            --accent-hover: #1d4ed8;
+            --input-bg: #f8fafc;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
@@ -24,16 +25,7 @@
             overflow: hidden;
             padding: 8px;
         }
-        
-        /* Master Console Layout */
-        .workspace {
-            display: flex;
-            flex: 1;
-            gap: 8px;
-            min-height: 0;
-        }
-        
-        /* Left Controller Column */
+        .workspace { display: flex; flex: 1; gap: 8px; min-height: 0; }
         .control-panel {
             width: 400px;
             background: var(--panel);
@@ -41,62 +33,49 @@
             display: flex;
             flex-direction: column;
             padding: 16px;
-            gap: 16px;
+            gap: 14px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
-        
-        /* Right Monitor Column */
         .monitor-panel {
             flex: 1;
-            background: #05070f;
+            background: #fafafa;
             border: 1px solid var(--border);
             display: flex;
             flex-direction: column;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
-
-        h2 { font-size: 14px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-        
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-        
+        h2 { font-size: 13px; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         label { font-size: 11px; color: var(--text-muted); font-weight: bold; }
         input, textarea {
-            background: #070a12;
+            background: var(--input-bg);
             border: 1px solid var(--border);
-            color: #4ade80;
+            color: #0284c7;
             padding: 8px;
             font-family: inherit;
             font-size: 13px;
-            border-radius: 2px;
+            border-radius: 4px;
             width: 100%;
         }
-        input:focus, textarea:focus { outline: none; border-color: var(--accent); }
-        textarea { resize: none; flex: 1; min-height: 80px; }
-
+        input:focus, textarea:focus { outline: none; border-color: var(--accent); background: #ffffff; }
+        textarea { resize: none; flex: 1; min-height: 70px; }
         button {
             background: var(--accent);
-            color: var(--text);
-            border: 1px solid var(--border);
+            color: #ffffff;
+            border: none;
             padding: 10px;
             font-family: inherit;
             font-size: 13px;
             font-weight: bold;
             cursor: pointer;
             text-transform: uppercase;
+            border-radius: 4px;
             transition: background 0.1s;
         }
-        button:hover { background: #1d4ed8; }
-        
-        /* Console Logs Window */
+        button:hover { background: var(--accent-hover); }
         .terminal-header {
-            background: var(--panel);
+            background: #f8fafc;
             border-bottom: 1px solid var(--border);
             padding: 8px 16px;
             display: flex;
@@ -109,8 +88,10 @@
             overflow-y: auto;
             font-size: 13px;
             line-height: 1.6;
+            background: #ffffff;
+            color: #334155;
         }
-        .clear-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 2px 8px; font-size: 11px; }
+        .clear-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 2px 8px; font-size: 11px; border-radius: 3px; }
         .clear-btn:hover { border-color: var(--text); color: var(--text); }
     </style>
 </head>
@@ -122,27 +103,32 @@
         
         <div class="form-row">
             <div class="form-group">
-                <label>[NET_SSID]</label>
+                <label>[SSID]</label>
                 <input type="text" id="ssid" autocomplete="off">
             </div>
             <div class="form-group">
-                <label>[NET_PASS]</label>
+                <label>[PASSWORD]</label>
                 <input type="password" id="password">
             </div>
         </div>
 
         <div class="form-group">
-            <label>[LINE_API_BEARER_TOKEN]</label>
+            <label>[TOKEN]</label>
             <input type="password" id="token">
         </div>
 
         <div class="form-group">
-            <label>[LINE_TARGET_UUID]</label>
+            <label>[USER_ID]</label>
             <input type="text" id="user_id" autocomplete="off">
         </div>
 
+        <div class="form-group">
+            <label>[BLUETOOTH]</label>
+            <input type="text" id="ble_name" placeholder="e.g. ESP32CAM-Config" autocomplete="off">
+        </div>
+
         <div class="form-group" style="flex: 1;">
-            <label>[RAW_DATA_MESSAGE_STRING]</label>
+            <label>[MESSAGE]</label>
             <textarea id="message"></textarea>
         </div>
         
@@ -166,28 +152,27 @@ function log(message, type = 'info') {
     const consoleBox = document.getElementById('consoleLog');
     const timestamp = new Date().toLocaleTimeString();
     let prefix = '>> ';
-    let color = '#e2e8f0';
+    let color = '#334155';
     
-    if (type === 'error') { color = '#f87171'; prefix = '[ERR] '; }
-    if (type === 'warn') { color = '#fbbf24'; prefix = '[WRN] '; }
-    if (type === 'success') { color = '#4ade80'; prefix = '[OK ] '; }
+    if (type === 'error') { color = '#dc2626'; prefix = '[ERR] '; }
+    if (type === 'warn') { color = '#d97706'; prefix = '[WRN] '; }
+    if (type === 'success') { color = '#16a34a'; prefix = '[OK ] '; }
     
     consoleBox.innerHTML += `<span style="color: ${color}">${timestamp} ${prefix}${message}</span><br/>`;
     consoleBox.scrollTop = consoleBox.scrollHeight;
 }
 
-function clearLog() {
-    document.getElementById('consoleLog').innerHTML = '';
-}
+function clearLog() { document.getElementById('consoleLog').innerHTML = ''; }
 
 async function sendCredentials() {
     const ssid = document.getElementById('ssid').value;
     const pass = document.getElementById('password').value;
     const token = document.getElementById('token').value;
     const userId = document.getElementById('user_id').value;
+    const bleName = document.getElementById('ble_name').value;
     const msg = document.getElementById('message').value;
     
-    if(!ssid || !pass || !token || !userId || !msg) { 
+    if(!ssid || !pass || !token || !userId || !bleName || !msg) { 
         log('Data packet injection aborted: Missing parameters within dataset fields.', 'warn');
         return; 
     }
@@ -210,7 +195,7 @@ async function sendCredentials() {
         const service = await server.getPrimaryService(SERVICE_UUID);
         const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
         
-        const rawString = `${ssid},${pass},${token},${userId},${msg}`;
+        const rawString = `${ssid},${pass},${token},${userId},${msg},${bleName}`;
         const encoder = new TextEncoder();
         const payload = encoder.encode(rawString);
         
@@ -219,13 +204,12 @@ async function sendCredentials() {
         
         log('Data transmission complete. Payload verified.', 'success');
         await device.gatt.disconnect();
-        log('Session terminated cleanly. Device returned to operational state.');
+        log('Session terminated cleanly.');
         
     } catch (error) {
         log(`Pipeline exception error: ${error.message}`, 'error');
     }
 }
-    
 log('Terminal sequence active. Monitoring pipeline ready.');
 </script>
 </body>
