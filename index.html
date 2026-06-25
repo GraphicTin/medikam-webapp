@@ -34,70 +34,139 @@
 
 <script>
 const SERVICE_UUID = "4faac861-11a1-11ee-be56-0242ac120002";
+
 const CHARACTERISTIC_UUID = "4faac862-11a1-11ee-be56-0242ac120002";
 
+
+
 function log(message, type = 'info') {
+
     const consoleBox = document.getElementById('consoleLog');
+
     const timestamp = new Date().toLocaleTimeString();
+
     let color = '#00ff00';
+
     if (type === 'error') color = '#ff3b30';
+
     if (type === 'warn') color = '#ff9500';
+
     
+
     consoleBox.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span><br/>`;
+
     consoleBox.scrollTop = consoleBox.scrollHeight;
+
     console.log(`[BLE DEV] ${message}`);
+
 }
+
+
 
 function clearLog() {
+
     document.getElementById('consoleLog').innerHTML = '';
+
 }
 
+
+
+
+
+
 async function sendCredentials() {
+
     const ssid = document.getElementById('ssid').value;
+
     const pass = document.getElementById('password').value;
+
     
+
     if(!ssid || !pass) { 
+
         log('Error: Empty credentials rejected.', 'warn');
+
         return; 
+
     }
+
     
+
     log('Scanning for ESP32-CAM (Polling window active)...');
 
     try {
-        // Standard Web Bluetooth API implementation requiring manual user choice
+
+    
+        
+
         const device = await navigator.bluetooth.requestDevice({
+
             filters: [{ services: [SERVICE_UUID] }]
-        });
-        
-        log(`Paired target: ${device.name || device.id}. Connecting...`);
-        
-        device.addEventListener('gattserverdisconnected', () => {
-            log('Target device disconnected unexpectedly.', 'error');
+
         });
 
+        
+
+        log(`Found device: ${device.name || device.id}. Connecting...`);
+
+        
+
+        // Listen for sudden disconnections (e.g., if ESP32 deep sleep window times out)
+
+        device.addEventListener('gattserverdisconnected', () => {
+
+            log('Target device disconnected unexpectedly.', 'error');
+
+        });
+
+
+
         const server = await device.gatt.connect();
+
         log('GATT Server connected. Locating services...');
+
         
+
         const service = await server.getPrimaryService(SERVICE_UUID);
+
         const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+
         log('Characteristic verified. Encoding payload...');
+
         
+
         const encoder = new TextEncoder();
+
         const payload = encoder.encode(`${ssid},${pass}`);
+
         
+
         log(`Transmitting raw binary: ${payload.length} bytes...`);
+
         await characteristic.writeValue(payload);
+
         
+
         log('Payload acknowledged by ESP32 successfully!', 'info');
+
         await device.gatt.disconnect();
+
         log('Disconnected cleanly.');
+
         
+
     } catch (error) {
+
         log(`BLE Exception: ${error.message}`, 'error');
+
     }
+
 }
+
     
+
 log('Web Terminal initialized. Ready to interface.');
+
 
 </script>
 </body>
