@@ -139,8 +139,8 @@
         </div>
         
         <div class="button-group">
-            <button class="btn-primary" onclick="sendCredentials()">Transmit Pipeline</button>
-            <button class="btn-alt" onclick="triggerLineNotify()">Test LINE API</button>
+            <button class="btn-primary" onclick="sendCredentials()">Transmit Config</button>
+            <button class="btn-alt" onclick="triggerHardwareLineNotify()">Hardware Test</button>
         </div>
     </div>
 
@@ -155,7 +155,8 @@
 
 <script>
 const SERVICE_UUID = "4faac861-11a1-11ee-be56-0242ac120002";
-const CHARACTERISTIC_UUID = "4faac862-11a1-11ee-be56-0242ac120002";
+const CONFIG_CHAR_UUID = "4faac862-11a1-11ee-be56-0242ac120002";
+const TEST_CHAR_UUID   = "4faac863-11a1-11ee-be56-0242ac120002"; // Added instruction pipeline
 
 function log(message, type = 'info') {
     const consoleBox = document.getElementById('consoleLog');
@@ -173,83 +174,55 @@ function log(message, type = 'info') {
 
 function clearLog() { document.getElementById('consoleLog').innerHTML = ''; }
 
-async function triggerLineNotify() {
-    const token = document.getElementById('token').value;
-    const userId = document.getElementById('user_id').value;
-    const msg = document.getElementById('message').value;
-
-    // Validation removed. Script proceeds with whatever data is present.
-    log('Dispatching verification payload to LINE messaging gateway endpoint...');
+async function executeBleTransaction(characteristicUuid, payloadString, completionMessage) {
+    log('Scanning host wireless adapters for advertising target...');
     try {
-        const response = await fetch('https://api.line.me/v2/bot/message/push', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                to: userId,
-                messages: [{ type: 'text', text: msg }]
-            })
+        const device = await navigator.bluetooth.requestDevice({
+            filters: [{ services: [SERVICE_UUID] }]
         });
+        
+        const disconnectHandler = () => { log('Link terminated by hardware window boundary.', 'error'); };
+        device.addEventListener('gattserverdisconnected', disconnectHandler);
 
-        if (response.ok) {
-            log('LINE notification service accepted packet sequence directly.', 'success');
-        } else {
-            const errData = await response.json();
-            log(`LINE Gateway response rejection error: Code ${response.status} - ${JSON.stringify(errData)}`, 'error');
-        }
+        log('Initializing session handshake...');
+        const server = await device.gatt.connect();
+        
+        const service = await server.getPrimaryService(SERVICE_UUID);
+        const characteristic = await service.getCharacteristic(characteristicUuid);
+        
+        const encoder = new TextEncoder();
+        const payload = encoder.encode(payloadString);
+        
+        log(`Streaming raw data array payload (${payload.length} bytes)...`);
+        await characteristic.writeValue(payload);
+        
+        log(completionMessage, 'success');
+        
+        device.removeEventListener('gattserverdisconnected', disconnectHandler);
+        await device.gatt.disconnect();
+        log('Session closed cleanly.');
     } catch (error) {
-        log(`CORS Policy / Network Intercept Exception: ${error.message}. Note: Browser runtime may prevent cross-origin fetch requests outside of backend proxies.`, 'warn');
+        log(`Pipeline exception error: ${error.message}`, 'error');
     }
 }
 
-async function sendCredentials() {
+function sendCredentials() {
     const ssid = document.getElementById('ssid').value;
     const pass = document.getElementById('password').value;
     const token = document.getElementById('token').value;
     const userId = document.getElementById('user_id').value;
     const bleName = document.getElementById('ble_name').value;
     const msg = document.getElementById('message').value;
-    
-    log('Scanning host wireless adapters for advertising target UUID...');
-    try {
-        const device = await navigator.bluetooth.requestDevice({
-            filters: [{ services: [SERVICE_UUID] }]
-        });
-        
-        log(`Target verification matched: ID: ${device.id}. Initializing session handshake.`);
-        
-        const disconnectHandler = () => {
-            log('Link terminated by hardware window boundary.', 'error');
-        };
-        
-        device.addEventListener('gattserverdisconnected', disconnectHandler);
 
-        const server = await device.gatt.connect();
-        log('GATT interface linked. Polling peripheral descriptors...');
-        
-        const service = await server.getPrimaryService(SERVICE_UUID);
-        const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
-        
-        // Structured string maintains array placement positions even if fields are completely blank
-        const rawString = `${ssid},${pass},${token},${userId},${msg},${bleName}`;
-        const encoder = new TextEncoder();
-        const payload = encoder.encode(rawString);
-        
-        log(`Streaming dataset array to target characteristic register (${payload.length} bytes)...`);
-        await characteristic.writeValue(payload);
-        
-        log('Data transmission complete. Payload verified.', 'success');
-        
-        device.removeEventListener('gattserverdisconnected', disconnectHandler);
-        await device.gatt.disconnect();
-        log('Session terminated cleanly.');
-        
-    } catch (error) {
-        log(`Pipeline exception error: ${error.message}`, 'error');
-    }
+    const rawString = `${ssid},${pass},${token},${userId},${msg},${bleName}`;
+    executeBleTransaction(CONFIG_CHAR_UUID, rawString, 'Data transmission complete. Payload verified.');
 }
+
+function triggerHardwareLineNotify() {
+    // Sends a direct trigger character string ("1") to the test register
+    executeBleTransaction(TEST_CHAR_UUID, "1", 'Hardware alert pipeline execution command issued.');
+}
+
 log('Terminal sequence active. Monitoring pipeline ready.');
 </script>
 </body>
