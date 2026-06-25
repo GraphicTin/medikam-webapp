@@ -185,9 +185,12 @@ async function sendCredentials() {
         
         log(`Target verification matched: ID: ${device.id}. Initializing session handshake.`);
         
-        device.addEventListener('gattserverdisconnected', () => {
-            log('Hardware loop sequence termination: Link dropped.', 'error');
-        });
+        // Define the handler with a named variable so we can clean it up later
+        const disconnectHandler = () => {
+            log('Link terminated by hardware window boundary.', 'error');
+        };
+        
+        device.addEventListener('gattserverdisconnected', disconnectHandler);
 
         const server = await device.gatt.connect();
         log('GATT interface linked. Polling peripheral descriptors...');
@@ -203,6 +206,10 @@ async function sendCredentials() {
         await characteristic.writeValue(payload);
         
         log('Data transmission complete. Payload verified.', 'success');
+        
+        // CRITICAL FIX: Unbind the listener BEFORE triggering disconnect to prevent false errors
+        device.removeEventListener('gattserverdisconnected', disconnectHandler);
+        
         await device.gatt.disconnect();
         log('Session terminated cleanly.');
         
