@@ -178,11 +178,7 @@ async function triggerLineNotify() {
     const userId = document.getElementById('user_id').value;
     const msg = document.getElementById('message').value;
 
-    if (!token || !userId || !msg) {
-        log('Local test execution aborted: TOKEN, USER_ID, and MESSAGE arrays are required.', 'warn');
-        return;
-    }
-
+    // Validation removed. Script proceeds with whatever data is present.
     log('Dispatching verification payload to LINE messaging gateway endpoint...');
     try {
         const response = await fetch('https://api.line.me/v2/bot/message/push', {
@@ -216,11 +212,6 @@ async function sendCredentials() {
     const bleName = document.getElementById('ble_name').value;
     const msg = document.getElementById('message').value;
     
-    if(!ssid || !pass || !token || !userId || !bleName || !msg) { 
-        log('Data packet injection aborted: Missing parameters within dataset fields.', 'warn');
-        return; 
-    }
-    
     log('Scanning host wireless adapters for advertising target UUID...');
     try {
         const device = await navigator.bluetooth.requestDevice({
@@ -241,6 +232,7 @@ async function sendCredentials() {
         const service = await server.getPrimaryService(SERVICE_UUID);
         const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
         
+        // Structured string maintains array placement positions even if fields are completely blank
         const rawString = `${ssid},${pass},${token},${userId},${msg},${bleName}`;
         const encoder = new TextEncoder();
         const payload = encoder.encode(rawString);
