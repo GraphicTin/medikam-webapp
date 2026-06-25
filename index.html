@@ -156,7 +156,7 @@
 <script>
 const SERVICE_UUID = "4faac861-11a1-11ee-be56-0242ac120002";
 const CONFIG_CHAR_UUID = "4faac862-11a1-11ee-be56-0242ac120002";
-const TEST_CHAR_UUID   = "4faac863-11a1-11ee-be56-0242ac120002"; // Added instruction pipeline
+const TRIGGER_CHAR_UUID   = "4faac863-11a1-11ee-be56-0242ac120002";
 
 function log(message, type = 'info') {
     const consoleBox = document.getElementById('consoleLog');
@@ -220,7 +220,7 @@ function sendCredentials() {
 
 function triggerHardwareLineNotify() {
     // Sends a direct trigger character string ("1") to the test register
-    executeBleTransaction(TEST_CHAR_UUID, "1", 'Hardware alert pipeline execution command issued.');
+    executeBleTransaction(TRIGGER_CHAR_UUID, "1", 'Hardware alert pipeline execution command issued.');
 }
 
 log('Terminal sequence active. Monitoring pipeline ready.');
