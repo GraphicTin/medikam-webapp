@@ -198,14 +198,15 @@ async function executeBleTransaction(characteristicUuid, payloadString, completi
         
         log(completionMessage, 'success');
         
+        // CRITICAL FIX: Unbind the listener BEFORE triggering disconnect to kill the false [ERR] logs
         device.removeEventListener('gattserverdisconnected', disconnectHandler);
+        
         await device.gatt.disconnect();
         log('Session closed cleanly.');
     } catch (error) {
         log(`Pipeline exception error: ${error.message}`, 'error');
     }
 }
-
 function sendCredentials() {
     const ssid = document.getElementById('ssid').value;
     const pass = document.getElementById('password').value;
