@@ -1,280 +1,40 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>ESP32-CAM Control Terminal</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        :root {
-            --bg: #f1f5f9;
-            --panel: #ffffff;
-            --border: #cbd5e1;
-            --text: #0f172a;
-            --text-muted: #64748b;
-            --accent: #2563eb;
-            --accent-hover: #1d4ed8;
-            --accent-alt: #16a34a;
-            --accent-alt-hover: #15803d;
-            --input-bg: #f8fafc;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { 
-            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; 
-            background: var(--bg); 
-            color: var(--text); 
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            padding: 8px;
-        }
-        .workspace { display: flex; flex: 1; gap: 8px; min-height: 0; position: relative; }
-        .control-panel {
-            width: 400px;
-            background: var(--panel);
-            border: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            padding: 16px;
-            gap: 14px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            position: relative;
-        }
-        .monitor-panel {
-            flex: 1;
-            background: #fafafa;
-            border: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-        h2 { font-size: 13px; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
-        .form-group { display: flex; flex-direction: column; gap: 4px; }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .button-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: auto; }
-        label { font-size: 11px; color: var(--text-muted); font-weight: bold; }
-        input, textarea {
-            background: var(--input-bg);
-            border: 1px solid var(--border);
-            color: #0284c7;
-            padding: 8px;
-            font-family: inherit;
-            font-size: 13px;
-            border-radius: 4px;
-            width: 100%;
-        }
-        input:focus, textarea:focus { outline: none; border-color: var(--accent); background: #ffffff; }
-        textarea { resize: none; flex: 1; min-height: 70px; }
-        button {
-            width: 100%;
-            padding: 10px;
-            font-family: inherit;
-            font-size: 12px;
-            font-weight: bold;
-            cursor: pointer;
-            text-transform: uppercase;
-            border-radius: 4px;
-            border: none;
-            color: #ffffff;
-            transition: background 0.1s, opacity 0.1s;
-        }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-primary { background: var(--accent); }
-        .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
-        .btn-alt { background: var(--accent-alt); }
-        .btn-alt:hover:not(:disabled) { background: var(--accent-alt-hover); }
-        .terminal-header {
-            background: #f8fafc;
-            border-bottom: 1px solid var(--border);
-            padding: 8px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .terminal-log {
-            flex: 1;
-            padding: 16px;
-            overflow-y: auto;
-            font-size: 13px;
-            line-height: 1.6;
-            background: #ffffff;
-            color: #334155;
-        }
-        .clear-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 2px 8px; font-size: 11px; border-radius: 3px; width: auto; }
-        .clear-btn:hover { border-color: var(--text); color: var(--text); }
-
-        /* Asynchronous Pipeline Overlay Lock Screen */
-        .pipeline-lock-overlay {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(15, 23, 42, 0.15);
-            backdrop-filter: blur(2px);
-            z-index: 50;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
-        }
-        .spinner-box {
-            background: #0f172a;
-            color: #38bdf8;
-            padding: 16px 24px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: bold;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            border: 1px solid #334155;
-            letter-spacing: 0.5px;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 BLE Controller</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="container">
+        <div class="card">
+            <h2>Device Connection</h2>
+            <button id="connectBtn" class="btn">Connect to ESP32</button>
+            <button id="disconnectBtn" class="btn btn-disconnect" style="display:none;">Disconnect</button>
+            <div id="statusText" class="status">Status: Disconnected</div>
+        </div>
 
-<div class="workspace">
-    <div class="pipeline-lock-overlay" id="pipelineLock">
-        <div class="spinner-box">PROCEEDING WIRELESS HANDSHAKE...</div>
-    </div>
-
-    <div class="control-panel" id="inputContainer">
-        <h2>System Parameters Matrix</h2>
-        
-        <div class="form-row">
-            <div class="form-group">
-                <label>[SSID]</label>
-                <input type="text" id="ssid" autocomplete="off">
+        <div class="card">
+            <h2>Trigger Action</h2>
+            <div class="input-group">
+                <label for="triggerInput">Trigger Payload</label>
+                <input type="text" id="triggerInput" value="PING">
             </div>
-            <div class="form-group">
-                <label>[PASSWORD]</label>
-                <input type="password" id="password">
-            </div>
+            <button id="sendTriggerBtn" class="btn" disabled>Send Trigger</button>
         </div>
 
-        <div class="form-group">
-            <label>[TOKEN]</label>
-            <input type="password" id="token">
-        </div>
-
-        <div class="form-group">
-            <label>[USER_ID]</label>
-            <input type="text" id="user_id" autocomplete="off">
-        </div>
-
-        <div class="form-group">
-            <label>[BLUETOOTH]</label>
-            <input type="text" id="ble_name" placeholder="e.g. ESP32CAM-Config" autocomplete="off">
-        </div>
-
-        <div class="form-group" style="flex: 1;">
-            <label>[MESSAGE]</label>
-            <textarea id="message"></textarea>
-        </div>
-        
-        <div class="button-group">
-            <button class="btn-primary" id="btnTx" onclick="sendCredentials()">Transmit Config</button>
-            <button class="btn-alt" id="btnTest" onclick="triggerHardwareLineNotify()">Hardware Test</button>
+        <div class="card">
+            <h2>Device Configuration</h2>
+            <div class="input-group"><label>WiFi SSID</label><input type="text" id="ssid"></div>
+            <div class="input-group"><label>WiFi Password</label><input type="password" id="password"></div>
+            <div class="input-group"><label>Line Token</label><input type="text" id="token"></div>
+            <div class="input-group"><label>Line User ID</label><input type="text" id="userId"></div>
+            <div class="input-group"><label>Line Message</label><input type="text" id="message"></div>
+            <div class="input-group"><label>Bluetooth Name</label><input type="text" id="btName"></div>
+            <button id="sendConfigBtn" class="btn" disabled>Sync Configuration</button>
         </div>
     </div>
-
-    <div class="monitor-panel">
-        <div class="terminal-header">
-            <h2>Live Output Monitor</h2>
-            <button class="clear-btn" onclick="clearLog()">Clear Buffer</button>
-        </div>
-        <div class="terminal-log" id="consoleLog"></div>
-    </div>
-</div>
-
-<script>
-const SERVICE_UUID = "4faac861-11a1-11ee-be56-0242ac120002";
-const CONFIG_CHAR_UUID = "4faac862-11a1-11ee-be56-0242ac120002";
-const TRIGGER_CHAR_UUID   = "4faac863-11a1-11ee-be56-0242ac120002";
-
-function log(message, type = 'info') {
-    const consoleBox = document.getElementById('consoleLog');
-    const timestamp = new Date().toLocaleTimeString();
-    let prefix = '>> ';
-    let color = '#334155';
-    
-    if (type === 'error') { color = '#dc2626'; prefix = '[ERR] '; }
-    if (type === 'warn') { color = '#d97706'; prefix = '[WRN] '; }
-    if (type === 'success') { color = '#16a34a'; prefix = '[OK ] '; }
-    
-    consoleBox.innerHTML += `<span style="color: ${color}">${timestamp} ${prefix}${message}</span><br/>`;
-    consoleBox.scrollTop = consoleBox.scrollHeight;
-}
-
-function clearLog() { document.getElementById('consoleLog').innerHTML = ''; }
-
-function setInterfaceLock(isLocked) {
-    const overlay = document.getElementById('pipelineLock');
-    const btnTx = document.getElementById('btnTx');
-    const btnTest = document.getElementById('btnTest');
-    
-    if (isLocked) {
-        overlay.style.display = 'flex';
-        btnTx.disabled = true;
-        btnTest.disabled = true;
-    } else {
-        overlay.style.display = 'none';
-        btnTx.disabled = false;
-        btnTest.disabled = false;
-    }
-}
-
-async function executeBleTransaction(characteristicUuid, payloadString, completionMessage) {
-    // Engaging strict pipeline debounce lockout boundary
-    setInterfaceLock(true);
-    log('Scanning host wireless adapters for advertising target...');
-    
-    try {
-        const device = await navigator.bluetooth.requestDevice({
-            filters: [{ services: [SERVICE_UUID] }]
-        });
-        
-        const disconnectHandler = () => { log('Link terminated by hardware window boundary.', 'error'); };
-        device.addEventListener('gattserverdisconnected', disconnectHandler);
-
-        log('Initializing session handshake...');
-        const server = await device.gatt.connect();
-        
-        const service = await server.getPrimaryService(SERVICE_UUID);
-        const characteristic = await service.getCharacteristic(characteristicUuid);
-        
-        const encoder = new TextEncoder();
-        const payload = encoder.encode(payloadString);
-        
-        log(`Streaming raw data array payload (${payload.length} bytes)...`);
-        await characteristic.writeValue(payload);
-        
-        log(completionMessage, 'success');
-        
-        device.removeEventListener('gattserverdisconnected', disconnectHandler);
-        await device.gatt.disconnect();
-        log('Session closed cleanly.');
-    } catch (error) {
-        log(`Pipeline exception error: ${error.message}`, 'error');
-    } finally {
-        // Disengaging pipeline boundary tracking lock
-        setInterfaceLock(false);
-    }
-}
-
-function sendCredentials() {
-    const ssid = document.getElementById('ssid').value;
-    const pass = document.getElementById('password').value;
-    const token = document.getElementById('token').value;
-    const userId = document.getElementById('user_id').value;
-    const bleName = document.getElementById('ble_name').value;
-    const msg = document.getElementById('message').value;
-
-    const rawString = `${ssid},${pass},${token},${userId},${msg},${bleName}`;
-    executeBleTransaction(CONFIG_CHAR_UUID, rawString, 'Data transmission complete. Payload verified.');
-}
-
-function triggerHardwareLineNotify() {
-    executeBleTransaction(TRIGGER_CHAR_UUID, "1", 'Hardware alert pipeline execution command issued.');
-}
-
-log('Terminal sequence active. Monitoring pipeline ready.');
-</script>
+    <script src="app.js"></script>
 </body>
 </html>
