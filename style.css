@@ -1,0 +1,96 @@
+:root {
+    --bg-color: #121212;
+    --card-bg: #1e1e1e;
+    --accent: #00adb5;
+    --text: #eeeeee;
+    --text-dim: #b3b3b3;
+    --border: #333333;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.container {
+    width: 100%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+}
+
+h2 {
+    margin-top: 0;
+    color: var(--accent);
+    font-size: 1.2rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+}
+
+.btn {
+    background-color: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 12px;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    width: 100%;
+    font-size: 1rem;
+}
+
+.btn:disabled {
+    background-color: #444;
+    color: var(--text-dim);
+    cursor: not-allowed;
+}
+
+.btn-disconnect {
+    background-color: #cf6679;
+    margin-top: 10px;
+}
+
+.input-group {
+    margin-bottom: 12px;
+}
+
+label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+}
+
+input {
+    width: 100%;
+    padding: 10px;
+    background: #2d2d2d;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+input:focus {
+    outline: 1px solid var(--accent);
+}
+
+.status {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    text-align: center;
+    margin-top: 10px;
+}

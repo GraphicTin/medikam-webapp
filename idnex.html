@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 BLE Controller</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h2>Device Connection</h2>
+            <button id="connectBtn" class="btn">Connect to ESP32</button>
+            <button id="disconnectBtn" class="btn btn-disconnect" style="display:none;">Disconnect</button>
+            <div id="statusText" class="status">Status: Disconnected</div>
+        </div>
+
+        <div class="card">
+            <h2>Trigger Action</h2>
+            <div class="input-group">
+                <label for="triggerInput">Trigger Payload</label>
+                <input type="text" id="triggerInput" value="PING">
+            </div>
+            <button id="sendTriggerBtn" class="btn" disabled>Send Trigger</button>
+        </div>
+
+        <div class="card">
+            <h2>Device Configuration</h2>
+            <div class="input-group"><label>WiFi SSID</label><input type="text" id="ssid"></div>
+            <div class="input-group"><label>WiFi Password</label><input type="password" id="password"></div>
+            <div class="input-group"><label>Line Token</label><input type="text" id="token"></div>
+            <div class="input-group"><label>Line User ID</label><input type="text" id="userId"></div>
+            <div class="input-group"><label>Line Message</label><input type="text" id="message"></div>
+            <div class="input-group"><label>Bluetooth Name</label><input type="text" id="btName"></div>
+            <button id="sendConfigBtn" class="btn" disabled>Sync Configuration</button>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
