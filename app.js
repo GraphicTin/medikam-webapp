@@ -1,6 +1,20 @@
 const SERVICE_UUID = "4faac861-11a1-11ee-be56-0242ac120002";
-const CONFIG_CHAR_UUID = "4faac862-11a1-11ee-be56-0242ac120002";
-const TRIGGER_CHAR_UUID = "4faac863-11a1-11ee-be56-0242ac120002";
+const CHARACTERISTIC_UUID = "4faac862-11a1-11ee-be56-0242ac120002"; // Unified Handle
+
+const CMD_CONFIG_UPDATE = 0x01;
+const CMD_TRIGGER_NOTIF = 0x02;
+
+const FIELD_IDS = {
+    'ssid':      0x0A,
+    'password':  0x0B,
+    'token':     0x0C,
+    'user_id':   0x0D,
+    'message':   0x0E,
+    'ble_name':  0x0F,
+    'time_1':    0x10,
+    'time_2':    0x11,
+    'time_3':    0x12
+};
 
 document.addEventListener('DOMContentLoaded', () => {
     ['time_1', 'time_2', 'time_3'].forEach(id => {
@@ -10,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
         element.addEventListener('input', (e) => {
             let cursor = e.target.selectionStart;
             let originalLen = e.target.value.length;
-            
             let num = e.target.value.replace(/[^0-9]/g, '');
             
             if (num.length >= 1) {
@@ -54,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function log(message, type = 'info') {
     const consoleBox = document.getElementById('consoleLog');
+    if (!consoleBox) return;
     const timestamp = new Date().toLocaleTimeString();
     let prefix = '>> ';
     let color = '#334155';
@@ -73,18 +87,12 @@ function setInterfaceLock(isLocked) {
     const btnTx = document.getElementById('btnTx');
     const btnTest = document.getElementById('btnTest');
     
-    if (isLocked) {
-        overlay.style.display = 'flex';
-        btnTx.disabled = true;
-        btnTest.disabled = true;
-    } else {
-        overlay.style.display = 'none';
-        btnTx.disabled = false;
-        btnTest.disabled = false;
-    }
+    if (overlay) overlay.style.display = isLocked ? 'flex' : 'none';
+    if (btnTx) btnTx.disabled = isLocked;
+    if (btnTest) btnTest.disabled = isLocked;
 }
 
-async function executeBleTransaction(characteristicUuid, payloadArray, completionMessage) {
+async function executeBleTransaction(binaryBuffer, completionMessage) {
     setInterfaceLock(true);
     log('Scanning host wireless adapters for advertising target...');
     
@@ -100,15 +108,10 @@ async function executeBleTransaction(characteristicUuid, payloadArray, completio
         const server = await device.gatt.connect();
         
         const service = await server.getPrimaryService(SERVICE_UUID);
-        const characteristic = await service.getCharacteristic(characteristicUuid);
+        const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
         
-        const encoder = new TextEncoder();
-        
-        for (const item of payloadArray) {
-            const payload = encoder.encode(item);
-            log(`Streaming raw data array payload: "${item}" (${payload.length} bytes)...`);
-            await characteristic.writeValue(payload);
-        }
+        log(`Streaming single atomic payload byte block (${binaryBuffer.byteLength} bytes)...`);
+        await characteristic.writeValue(binaryBuffer);
         
         log(completionMessage, 'success');
         
@@ -123,42 +126,56 @@ async function executeBleTransaction(characteristicUuid, payloadArray, completio
 }
 
 function sendActiveConfig() {
-    const lookup = {
-        'ssid': 'SSID',
-        'password': 'PASSWORD',
-        'token': 'TOKEN',
-        'user_id': 'USER_ID',
-        'ble_name': 'BLUETOOTH',
-        'time_1': 'TIME_1',
-        'time_2': 'TIME_2',
-        'time_3': 'TIME_3',
-        'message': 'MESSAGE'
-    };
+    let fieldsToPack = [];
+    let totalPayloadSize = 1; // 1 byte allocated for Command Type ID
 
-    let activePayloads = [];
+    const encoder = new TextEncoder();
     const timeRegex = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 
-    for (const [elementId, key] of Object.entries(lookup)) {
-        const val = document.getElementById(elementId).value.trim();
+    for (const [elementId, fieldId] of Object.entries(FIELD_IDS)) {
+        const element = document.getElementById(elementId);
+        if (!element) continue;
+
+        const val = element.value.trim();
         if (val.length > 0) {
             if (elementId.startsWith('time_') && !timeRegex.test(val)) {
-                log(`Invalid 24h formatting structure on ${key}. Ensure full HH:MM compilation.`, 'error');
+                log(`Invalid 24h formatting structure on field ID ${fieldId}. Ensure full HH:MM compilation.`, 'error');
                 return;
             }
-            activePayloads.push(`${key}=${val}`);
+
+            const encodedValue = encoder.encode(val);
+            if (encodedValue.length > 255) {
+                log(`Payload content sizing for element ${elementId} out of range (>255).`, 'error');
+                return;
+            }
+
+            fieldsToPack.push({ id: fieldId, len: encodedValue.length, data: encodedValue });
+            totalPayloadSize += 2 + encodedValue.length; // 1 byte ID + 1 byte Length + Data payload
         }
     }
 
-    if (activePayloads.length === 0) {
+    if (fieldsToPack.length === 0) {
         log('No parameters populated. Transmission aborted.', 'warn');
         return;
     }
 
-    executeBleTransaction(CONFIG_CHAR_UUID, activePayloads, 'Target parameters synced and verified.');
+    const packet = new Uint8Array(totalPayloadSize);
+    packet[0] = CMD_CONFIG_UPDATE;
+
+    let offset = 1;
+    for (const field of fieldsToPack) {
+        packet[offset++] = field.id;
+        packet[offset++] = field.len;
+        packet.set(field.data, offset);
+        offset += field.len;
+    }
+
+    executeBleTransaction(packet, 'Target parameters packed into TLV array and synced successfully.');
 }
 
 function triggerHardwareLineNotify() {
-    executeBleTransaction(TRIGGER_CHAR_UUID, ["1"], 'Hardware alert pipeline execution command issued.');
+    const packet = new Uint8Array([CMD_TRIGGER_NOTIF]);
+    executeBleTransaction(packet, 'Hardware alert pipeline execution command issued.');
 }
 
 log('Terminal sequence active. Monitoring pipeline ready.');
