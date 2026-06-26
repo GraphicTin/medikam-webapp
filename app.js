@@ -2,6 +2,18 @@ const SERVICE_UUID = "4faac861-11a1-11ee-be56-0242ac120002";
 const CONFIG_CHAR_UUID = "4faac862-11a1-11ee-be56-0242ac120002";
 const TRIGGER_CHAR_UUID = "4faac863-11a1-11ee-be56-0242ac120002";
 
+// Auto-formatter to force strict HH:MM typing mechanics
+['time_1', 'time_2', 'time_3'].forEach(id => {
+    const element = document.getElementById(id);
+    element.addEventListener('input', (e) => {
+        let value = e.target.value.replace(/[^0-9]/g, '');
+        if (value.length > 2) {
+            value = value.slice(0, 2) + ':' + value.slice(2, 4);
+        }
+        e.target.value = value;
+    });
+});
+
 function log(message, type = 'info') {
     const consoleBox = document.getElementById('consoleLog');
     const timestamp = new Date().toLocaleTimeString();
@@ -86,10 +98,15 @@ function sendActiveConfig() {
     };
 
     let activePayloads = [];
+    const timeRegex = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 
     for (const [elementId, key] of Object.entries(lookup)) {
         const val = document.getElementById(elementId).value.trim();
         if (val.length > 0) {
+            if (elementId.startsWith('time_') && !timeRegex.test(val)) {
+                log(`Invalid 24h formatting context on ${key.toLowerCase()}. Use HH:MM execution standards.`, 'error');
+                return;
+            }
             activePayloads.push(`${key}=${val}`);
         }
     }

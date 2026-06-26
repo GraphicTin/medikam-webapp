@@ -44,9 +44,9 @@
         <div class="form-group">
             <label>[TRIGGER TIMES]</label>
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
-                <input type="time" id="time_1" step="60">
-                <input type="time" id="time_2" step="60">
-                <input type="time" id="time_3" step="60">
+                <input type="text" id="time_1" placeholder="HH:MM" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" maxlength="5" autocomplete="off">
+                <input type="text" id="time_2" placeholder="HH:MM" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" maxlength="5" autocomplete="off">
+                <input type="text" id="time_3" placeholder="HH:MM" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" maxlength="5" autocomplete="off">
             </div>
         </div>
 
