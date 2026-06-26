@@ -1,60 +1,73 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Device Control Panel</title>
+    <title>ESP32 Control Terminal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="app-container">
-        <div class="status-bar">
-            <span id="statusText">Disconnected</span>
-            <button id="connectBtn" class="action-btn connect">Connect Device</button>
-            <button id="disconnectBtn" class="action-btn disconnect" style="display:none;">Disconnect</button>
-        </div>
 
-        <div class="panel-card">
-            <h2>Instant Line Notifications</h2>
-            <div class="trigger-grid">
-                <button class="trigger-btn" data-trigger="1">Execute Trigger 1</button>
-                <button class="trigger-btn" data-trigger="2">Execute Trigger 2</button>
-                <button class="trigger-btn" data-trigger="3">Execute Trigger 3</button>
+<div class="workspace">
+    <div class="pipeline-lock-overlay" id="pipelineLock">
+        <div class="spinner-box">PROCEEDING WIRELESS HANDSHAKE...</div>
+    </div>
+
+    <div class="control-panel" id="inputContainer">
+        <h2>System Parameters Matrix</h2>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label>[SSID]</label>
+                <input type="text" id="ssid" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>[PASSWORD]</label>
+                <input type="password" id="password">
             </div>
         </div>
 
-        <div class="panel-card">
-            <h2>Device Configuration</h2>
-            <p class="section-desc">Modify only the parameters you want to update. Empty fields will not be sent.</p>
-            
-            <div class="field-group">
-                <label>Network Settings</label>
-                <input type="text" id="cfg_SSID" placeholder="WiFi SSID (SSID)">
-                <input type="password" id="cfg_PASSWORD" placeholder="WiFi Password (PASSWORD)">
-            </div>
+        <div class="form-group">
+            <label>[TOKEN]</label>
+            <input type="password" id="token">
+        </div>
 
-            <div class="field-group">
-                <label>Line Messaging Credentials</label>
-                <input type="text" id="cfg_TOKEN" placeholder="Line Token (TOKEN)">
-                <input type="text" id="cfg_USER_ID" placeholder="Line User ID (USER_ID)">
-                <input type="text" id="cfg_MESSAGE" placeholder="Notification Message (MESSAGE)">
-            </div>
+        <div class="form-group">
+            <label>[USER_ID]</label>
+            <input type="text" id="user_id" autocomplete="off">
+        </div>
 
-            <div class="field-group">
-                <label>System Properties</label>
-                <input type="text" id="cfg_BLUETOOTH" placeholder="Bluetooth Name (BLUETOOTH)">
-            </div>
+        <div class="form-group">
+            <label>[BLUETOOTH]</label>
+            <input type="text" id="ble_name" autocomplete="off">
+        </div>
 
-            <div class="field-group">
-                <label>Scheduled Trigger Times (HH:MM)</label>
-                <div class="time-row"><span>Slot 1:</span><input type="time" id="cfg_TIME_1"></div>
-                <div class="time-row"><span>Slot 2:</span><input type="time" id="cfg_TIME_2"></div>
-                <div class="time-row"><span>Slot 3:</span><input type="time" id="cfg_TIME_3"></div>
-            </div>
+        <div class="form-group">
+            <label>[TRIGGER TIMES]</label>
+            <div class="time-row"><label>TIME_1</label><input type="time" id="time_1"></div>
+            <div class="time-row"><label>TIME_2</label><input type="time" id="time_2"></div>
+            <div class="time-row"><label>TIME_3</label><input type="time" id="time_3"></div>
+        </div>
 
-            <button id="syncBtn" class="submit-btn" disabled>Sync Modifications</button>
+        <div class="form-group">
+            <label>[MESSAGE]</label>
+            <textarea id="message"></textarea>
+        </div>
+        
+        <div class="button-group">
+            <button class="btn-primary" id="btnTx" onclick="sendActiveConfig()">Transmit Config</button>
+            <button class="btn-alt" id="btnTest" onclick="triggerHardwareLineNotify()">Hardware Test</button>
         </div>
     </div>
-    <script src="app.js"></script>
+
+    <div class="monitor-panel">
+        <div class="terminal-header">
+            <h2>Live Output Monitor</h2>
+            <button class="clear-btn" onclick="clearLog()">Clear Buffer</button>
+        </div>
+        <div class="terminal-log" id="consoleLog"></div>
+    </div>
+</div>
+
+<script src="app.js"></script>
 </body>
 </html>

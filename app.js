@@ -2,127 +2,108 @@ const SERVICE_UUID = "4faac861-11a1-11ee-be56-0242ac120002";
 const CONFIG_CHAR_UUID = "4faac862-11a1-11ee-be56-0242ac120002";
 const TRIGGER_CHAR_UUID = "4faac863-11a1-11ee-be56-0242ac120002";
 
-let bleDevice = null;
-let bleServer = null;
-let bleService = null;
-let triggerChar = null;
-let configChar = null;
+function log(message, type = 'info') {
+    const consoleBox = document.getElementById('consoleLog');
+    const timestamp = new Date().toLocaleTimeString();
+    let prefix = '>> ';
+    let color = '#334155';
+    
+    if (type === 'error') { color = '#dc2626'; prefix = '[ERR] '; }
+    if (type === 'warn') { color = '#d97706'; prefix = '[WRN] '; }
+    if (type === 'success') { color = '#16a34a'; prefix = '[OK ] '; }
+    
+    consoleBox.innerHTML += `<span style="color: ${color}">${timestamp} ${prefix}${message}</span><br/>`;
+    consoleBox.scrollTop = consoleBox.scrollHeight;
+}
 
-const connectBtn = document.getElementById('connectBtn');
-const disconnectBtn = document.getElementById('disconnectBtn');
-const syncBtn = document.getElementById('syncBtn');
-const statusText = document.getElementById('statusText');
-const triggerButtons = document.querySelectorAll('.trigger-btn');
+function clearLog() { document.getElementById('consoleLog').innerHTML = ''; }
 
-connectBtn.addEventListener('click', connectBLE);
-disconnectBtn.addEventListener('click', disconnectBLE);
-syncBtn.addEventListener('click', sendActiveConfiguration);
+function setInterfaceLock(isLocked) {
+    const overlay = document.getElementById('pipelineLock');
+    const btnTx = document.getElementById('btnTx');
+    const btnTest = document.getElementById('btnTest');
+    
+    if (isLocked) {
+        overlay.style.display = 'flex';
+        btnTx.disabled = true;
+        btnTest.disabled = true;
+    } else {
+        overlay.style.display = 'none';
+        btnTx.disabled = false;
+        btnTest.disabled = false;
+    }
+}
 
-triggerButtons.forEach(btn => {
-    btn.disabled = true;
-    btn.addEventListener('click', () => executeTrigger(btn.getAttribute('data-trigger')));
-});
-
-async function connectBLE() {
+async function executeBleTransaction(characteristicUuid, payloadArray, completionMessage) {
+    setInterfaceLock(true);
+    log('Scanning host wireless adapters for advertising target...');
+    
     try {
-        statusText.textContent = "Searching...";
-        bleDevice = await navigator.bluetooth.requestDevice({
+        const device = await navigator.bluetooth.requestDevice({
             filters: [{ services: [SERVICE_UUID] }]
         });
-
-        bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
-        statusText.textContent = "Connecting...";
         
-        bleServer = await bleDevice.gatt.connect();
-        bleService = await bleServer.getPrimaryService(SERVICE_UUID);
-        
-        triggerChar = await bleService.getCharacteristic(TRIGGER_CHAR_UUID);
-        configChar = await bleService.getCharacteristic(CONFIG_CHAR_UUID);
+        const disconnectHandler = () => { log('Link terminated by hardware window boundary.', 'error'); };
+        device.addEventListener('gattserverdisconnected', disconnectHandler);
 
-        statusText.textContent = `Connected: ${bleDevice.name}`;
-        statusText.style.color = "#2b6cb0";
+        log('Initializing session handshake...');
+        const server = await device.gatt.connect();
         
-        connectBtn.style.display = 'none';
-        disconnectBtn.style.display = 'block';
-        syncBtn.disabled = false;
-        triggerButtons.forEach(btn => btn.disabled = false);
-    } catch (error) {
-        console.error(error);
-        statusText.textContent = `Error: ${error.message}`;
-        statusText.style.color = "#c53030";
-    }
-}
-
-async function executeTrigger(value) {
-    if (!triggerChar) return;
-    try {
+        const service = await server.getPrimaryService(SERVICE_UUID);
+        const characteristic = await service.getCharacteristic(characteristicUuid);
+        
         const encoder = new TextEncoder();
-        await triggerChar.writeValueWithResponse(encoder.encode(value));
+        
+        for (const item of payloadArray) {
+            const payload = encoder.encode(item);
+            log(`Streaming raw data array payload: "${item}" (${payload.length} bytes)...`);
+            await characteristic.writeValue(payload);
+        }
+        
+        log(completionMessage, 'success');
+        
+        device.removeEventListener('gattserverdisconnected', disconnectHandler);
+        await device.gatt.disconnect();
+        log('Session closed cleanly.');
     } catch (error) {
-        alert(`Trigger communication error: ${error.message}`);
+        log(`Pipeline exception error: ${error.message}`, 'error');
+    } finally {
+        setInterfaceLock(false);
     }
 }
 
-async function sendActiveConfiguration() {
-    if (!configChar) return;
-
-    // Map DOM IDs to the exact string keys your C++ firmware conditions look for
+function sendActiveConfig() {
     const lookup = {
-        'cfg_SSID': 'SSID',
-        'cfg_PASSWORD': 'PASSWORD',
-        'cfg_TOKEN': 'TOKEN',
-        'cfg_USER_ID': 'USER_ID',
-        'cfg_MESSAGE': 'MESSAGE',
-        'cfg_BLUETOOTH': 'BLUETOOTH',
-        'cfg_TIME_1': 'TIME_1',
-        'cfg_TIME_2': 'TIME_2',
-        'cfg_TIME_3': 'TIME_3'
+        'ssid': 'SSID',
+        'password': 'PASSWORD',
+        'token': 'TOKEN',
+        'user_id': 'USER_ID',
+        'ble_name': 'BLUETOOTH',
+        'time_1': 'TIME_1',
+        'time_2': 'TIME_2',
+        'time_3': 'TIME_3',
+        'message': 'MESSAGE'
     };
 
-    let payloads = [];
+    let activePayloads = [];
 
-    for (const [elementId, configKey] of Object.entries(lookup)) {
-        const inputVal = document.getElementById(elementId).value.trim();
-        if (inputVal.length > 0) {
-            // Generates "KEY=value" strings to feed your firmware line parser loop
-            payloads.push(`${configKey}=${inputVal}`);
+    for (const [elementId, key] of Object.entries(lookup)) {
+        const val = document.getElementById(elementId).value.trim();
+        if (val.length > 0) {
+            activePayloads.push(`${key}=${val}`);
         }
     }
 
-    if (payloads.length === 0) {
-        alert("No configuration changes found.");
+    if (activePayloads.length === 0) {
+        log('No parameters populated. Transmission aborted.', 'warn');
         return;
     }
 
-    const encoder = new TextEncoder();
-    try {
-        // Sequential writes for each modified field to fit MTU limits safely
-        for (const item of payloads) {
-            await configChar.writeValueWithResponse(encoder.encode(item));
-        }
-        alert("Modifications synced successfully.");
-    } catch (error) {
-        alert(`Sync failed: ${error.message}`);
-    }
+    executeBleTransaction(CONFIG_CHAR_UUID, activePayloads, 'Target parameters synced and verified.');
 }
 
-function disconnectBLE() {
-    if (bleDevice && bleDevice.gatt.connected) {
-        bleDevice.gatt.disconnect();
-    }
+function triggerHardwareLineNotify() {
+    executeBleTransaction(TRIGGER_CHAR_UUID, ["1"], 'Hardware alert pipeline execution command issued.');
 }
 
-function onDisconnected() {
-    statusText.textContent = "Disconnected";
-    statusText.style.color = "#718096";
-    connectBtn.style.display = 'block';
-    disconnectBtn.style.display = 'none';
-    syncBtn.disabled = true;
-    triggerButtons.forEach(btn => btn.disabled = true);
-    
-    bleDevice = null;
-    bleServer = null;
-    bleService = null;
-    triggerChar = null;
-    configChar = null;
-}
+log('Terminal sequence active. Monitoring pipeline ready.');
