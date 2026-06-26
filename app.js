@@ -2,56 +2,53 @@ const SERVICE_UUID = "4faac861-11a1-11ee-be56-0242ac120002";
 const CONFIG_CHAR_UUID = "4faac862-11a1-11ee-be56-0242ac120002";
 const TRIGGER_CHAR_UUID = "4faac863-11a1-11ee-be56-0242ac120002";
 
-// Real-time strict 24-hour HH:MM structural formatter
-['time_1', 'time_2', 'time_3'].forEach(id => {
-    const element = document.getElementById(id);
-    
-    element.addEventListener('input', (e) => {
-        let cursor = e.target.selectionStart;
-        let originalLen = e.target.value.length;
+document.addEventListener('DOMContentLoaded', () => {
+    ['time_1', 'time_2', 'time_3'].forEach(id => {
+        const element = document.getElementById(id);
+        if (!element) return;
         
-        // Strip everything except raw numbers
-        let num = e.target.value.replace(/[^0-9]/g, '');
-        
-        // Logical bounds clamping for strict 24h clock values
-        if (num.length >= 1) {
-            let h1 = parseInt(num[0]);
-            if (h1 > 2) num = '2' + num.slice(1); // Max hour leading digit is 2
-        }
-        if (num.length >= 2) {
-            let h = parseInt(num.slice(0, 2));
-            if (h > 23) num = '23' + num.slice(2); // Max hour is 23
-        }
-        if (num.length >= 3) {
-            let m1 = parseInt(num[2]);
-            if (m1 > 5) num = num.slice(0, 2) + '5' + num.slice(3); // Max minute leading digit is 5
-        }
-        if (num.length >= 4) {
-            let m = parseInt(num.slice(2, 4));
-            if (m > 59) num = num.slice(0, 2) + '59'; // Max minute is 59
-        }
+        element.addEventListener('input', (e) => {
+            let cursor = e.target.selectionStart;
+            let originalLen = e.target.value.length;
+            
+            let num = e.target.value.replace(/[^0-9]/g, '');
+            
+            if (num.length >= 1) {
+                let h1 = parseInt(num[0]);
+                if (h1 > 2) num = '2' + num.slice(1);
+            }
+            if (num.length >= 2) {
+                let h = parseInt(num.slice(0, 2));
+                if (h > 23) num = '23' + num.slice(2);
+            }
+            if (num.length >= 3) {
+                let m1 = parseInt(num[2]);
+                if (m1 > 5) num = num.slice(0, 2) + '5' + num.slice(3);
+            }
+            if (num.length >= 4) {
+                let m = parseInt(num.slice(2, 4));
+                if (m > 59) num = num.slice(0, 2) + '59';
+            }
 
-        // Apply visual delimiter token
-        if (num.length > 2) {
-            e.target.value = num.slice(0, 2) + ':' + num.slice(2, 4);
-        } else {
-            e.target.value = num;
-        }
+            if (num.length > 2) {
+                e.target.value = num.slice(0, 2) + ':' + num.slice(2, 4);
+            } else {
+                e.target.value = num;
+            }
 
-        // Correct cursor drift sequence during active composition
-        if (e.target.value.length > originalLen && cursor === 3) cursor++;
-        e.target.setSelectionRange(cursor, cursor);
-    });
+            if (e.target.value.length > originalLen && cursor === 3) cursor++;
+            e.target.setSelectionRange(cursor, cursor);
+        });
 
-    // Zero-fill padding execution logic on focus departure matrix
-    element.addEventListener('blur', (e) => {
-        let val = e.target.value.replace(/[^0-9]/g, '');
-        if (val.length === 0) return;
-        
-        while (val.length < 4) {
-            val = val + '0';
-        }
-        e.target.value = val.slice(0, 2) + ':' + val.slice(2, 4);
+        element.addEventListener('blur', (e) => {
+            let val = e.target.value.replace(/[^0-9]/g, '');
+            if (val.length === 0) return;
+            
+            while (val.length < 4) {
+                val = val + '0';
+            }
+            e.target.value = val.slice(0, 2) + ':' + val.slice(2, 4);
+        });
     });
 });
 
