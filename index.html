@@ -3,37 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESP32 BLE Management</title>
+    <title>Device Control Panel</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="panel">
-        <section class="section">
-            <h2>Connection</h2>
-            <button id="connectBtn" class="action-btn">Connect Device</button>
-            <button id="disconnectBtn" class="action-btn cancel-btn" style="display:none;">Disconnect</button>
-            <p id="statusText" class="status-info">Disconnected</p>
-        </section>
+    <div class="app-container">
+        <div class="status-bar">
+            <span id="statusText">Disconnected</span>
+            <button id="connectBtn" class="action-btn connect">Connect Device</button>
+            <button id="disconnectBtn" class="action-btn disconnect" style="display:none;">Disconnect</button>
+        </div>
 
-        <section class="section">
-            <h2>Line Notification Triggers</h2>
+        <div class="panel-card">
+            <h2>Instant Line Notifications</h2>
             <div class="trigger-grid">
-                <button class="trigger-btn" onclick="sendTriggerValue('1')">Trigger 1</button>
-                <button class="trigger-btn" onclick="sendTriggerValue('2')">Trigger 2</button>
-                <button class="trigger-btn" onclick="sendTriggerValue('3')">Trigger 3</button>
+                <button class="trigger-btn" data-trigger="1">Execute Trigger 1</button>
+                <button class="trigger-btn" data-trigger="2">Execute Trigger 2</button>
+                <button class="trigger-btn" data-trigger="3">Execute Trigger 3</button>
             </div>
-        </section>
+        </div>
 
-        <section class="section">
-            <h2>System Parameters</h2>
-            <div class="field"><label>WiFi Network Name</label><input type="text" id="ssid"></div>
-            <div class="field"><label>WiFi Password</label><input type="password" id="password"></div>
-            <div class="field"><label>Line Token</label><input type="text" id="token"></div>
-            <div class="field"><label>Line User ID</label><input type="text" id="userId"></div>
-            <div class="field"><label>Line Message</label><input type="text" id="message"></div>
-            <div class="field"><label>Bluetooth Identifier</label><input type="text" id="btName"></div>
-            <button id="sendConfigBtn" class="action-btn" style="margin-top: 15px;" disabled>Save Settings</button>
-        </section>
+        <div class="panel-card">
+            <h2>Device Configuration</h2>
+            <p class="section-desc">Modify only the parameters you want to update. Empty fields will not be sent.</p>
+            
+            <div class="field-group">
+                <label>Network Settings</label>
+                <input type="text" id="cfg_SSID" placeholder="WiFi SSID (SSID)">
+                <input type="password" id="cfg_PASSWORD" placeholder="WiFi Password (PASSWORD)">
+            </div>
+
+            <div class="field-group">
+                <label>Line Messaging Credentials</label>
+                <input type="text" id="cfg_TOKEN" placeholder="Line Token (TOKEN)">
+                <input type="text" id="cfg_USER_ID" placeholder="Line User ID (USER_ID)">
+                <input type="text" id="cfg_MESSAGE" placeholder="Notification Message (MESSAGE)">
+            </div>
+
+            <div class="field-group">
+                <label>System Properties</label>
+                <input type="text" id="cfg_BLUETOOTH" placeholder="Bluetooth Name (BLUETOOTH)">
+            </div>
+
+            <div class="field-group">
+                <label>Scheduled Trigger Times (HH:MM)</label>
+                <div class="time-row"><span>Slot 1:</span><input type="time" id="cfg_TIME_1"></div>
+                <div class="time-row"><span>Slot 2:</span><input type="time" id="cfg_TIME_2"></div>
+                <div class="time-row"><span>Slot 3:</span><input type="time" id="cfg_TIME_3"></div>
+            </div>
+
+            <button id="syncBtn" class="submit-btn" disabled>Sync Modifications</button>
+        </div>
     </div>
     <script src="app.js"></script>
 </body>
