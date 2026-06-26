@@ -1,96 +1,128 @@
-:root {
-    --bg-color: #121212;
-    --card-bg: #1e1e1e;
-    --accent: #00adb5;
-    --text: #eeeeee;
-    --text-dim: #b3b3b3;
-    --border: #333333;
-}
-
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background-color: var(--bg-color);
-    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background-color: #f4f6f8;
+    color: #24292f;
     margin: 0;
-    padding: 20px;
+    padding: 30px 15px;
     display: flex;
     justify-content: center;
 }
 
-.container {
+.panel {
     width: 100%;
-    max-width: 500px;
+    max-width: 460px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
 }
 
-.card {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
+.section {
+    background: #ffffff;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
     padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 h2 {
-    margin-top: 0;
-    color: var(--accent);
-    font-size: 1.2rem;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 8px;
+    margin: 0 0 14px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #57606a;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-.btn {
-    background-color: var(--accent);
-    color: #fff;
-    border: none;
-    padding: 12px;
-    border-radius: 4px;
-    font-weight: bold;
+.action-btn, .trigger-btn {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    border: 1px solid rgba(27,31,36,0.15);
+    border-radius: 6px;
     cursor: pointer;
-    width: 100%;
-    font-size: 1rem;
+    transition: background-color 0.1s;
 }
 
-.btn:disabled {
-    background-color: #444;
-    color: var(--text-dim);
+.action-btn {
+    background-color: #2da44e;
+    color: #ffffff;
+    padding: 10px 16px;
+    width: 100%;
+}
+
+.action-btn:hover:not(:disabled) {
+    background-color: #2c974b;
+}
+
+.action-btn:disabled {
+    background-color: #94d3a2;
+    border-color: rgba(27,31,36,0.1);
     cursor: not-allowed;
 }
 
-.btn-disconnect {
-    background-color: #cf6679;
-    margin-top: 10px;
+.cancel-btn {
+    background-color: #f6f8fa;
+    color: #cf222e;
 }
 
-.input-group {
+.cancel-btn:hover {
+    background-color: #f3f4f6;
+}
+
+.trigger-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.trigger-btn {
+    background-color: #f6f8fa;
+    color: #24292f;
+    padding: 12px 0;
+    text-align: center;
+}
+
+.trigger-btn:hover {
+    background-color: #aeb5bc2e;
+}
+
+.field {
     margin-bottom: 12px;
+}
+
+.field:last-of-type {
+    margin-bottom: 0;
 }
 
 label {
     display: block;
-    font-size: 0.85rem;
-    color: var(--text-dim);
+    font-size: 12px;
+    font-weight: 500;
     margin-bottom: 4px;
+    color: #24292f;
 }
 
 input {
     width: 100%;
-    padding: 10px;
-    background: #2d2d2d;
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 14px;
+    background-color: #ffffff;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    color: #24292f;
     box-sizing: border-box;
+    box-shadow: inset 0 1px 0 rgba(208,215,222,0.2);
 }
 
 input:focus {
-    outline: 1px solid var(--accent);
+    border-color: #0969da;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(9,105,218,0.3);
 }
 
-.status {
-    font-size: 0.9rem;
-    color: var(--text-dim);
+.status-info {
+    font-size: 12px;
+    color: #57606a;
+    margin: 8px 0 0 0;
     text-align: center;
-    margin-top: 10px;
 }

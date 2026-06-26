@@ -8,55 +8,51 @@ let bleService = null;
 let triggerCharacteristic = null;
 let configCharacteristic = null;
 
-// UI Elements
 const connectBtn = document.getElementById('connectBtn');
 const disconnectBtn = document.getElementById('disconnectBtn');
-const sendTriggerBtn = document.getElementById('sendTriggerBtn');
 const sendConfigBtn = document.getElementById('sendConfigBtn');
 const statusText = document.getElementById('statusText');
 
-// Event Listeners
 connectBtn.addEventListener('click', connectBLE);
 disconnectBtn.addEventListener('click', disconnectBLE);
-sendTriggerBtn.addEventListener('click', sendTrigger);
 sendConfigBtn.addEventListener('click', sendConfig);
 
 async function connectBLE() {
     try {
-        statusText.textContent = "Status: Searching...";
+        statusText.textContent = "Searching...";
         bleDevice = await navigator.bluetooth.requestDevice({
             filters: [{ services: [SERVICE_UUID] }]
         });
 
         bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
 
-        statusText.textContent = "Status: Connecting...";
+        statusText.textContent = "Connecting...";
         bleServer = await bleDevice.gatt.connect();
         bleService = await bleServer.getPrimaryService(SERVICE_UUID);
         
         triggerCharacteristic = await bleService.getCharacteristic(TRIGGER_CHAR_UUID);
         configCharacteristic = await bleService.getCharacteristic(CONFIG_CHAR_UUID);
 
-        statusText.textContent = `Status: Connected to ${bleDevice.name}`;
+        statusText.textContent = `Connected: ${bleDevice.name}`;
         connectBtn.style.display = 'none';
         disconnectBtn.style.display = 'block';
-        sendTriggerBtn.disabled = false;
         sendConfigBtn.disabled = false;
     } catch (error) {
         console.error(error);
-        statusText.textContent = `Error: ${error.message}`;
+        statusText.textContent = `Connection failed: ${error.message}`;
     }
 }
 
-async function sendTrigger() {
-    if (!triggerCharacteristic) return;
-    const value = document.getElementById('triggerInput').value;
+async function sendTriggerValue(val) {
+    if (!triggerCharacteristic) {
+        alert("Connect to the device first.");
+        return;
+    }
     const encoder = new TextEncoder();
     try {
-        await triggerCharacteristic.writeValueWithResponse(encoder.encode(value));
-        alert("Trigger sent successfully");
+        await triggerCharacteristic.writeValueWithResponse(encoder.encode(val));
     } catch (error) {
-        alert(`Trigger write failed: ${error.message}`);
+        alert(`Trigger error: ${error.message}`);
     }
 }
 
@@ -76,9 +72,9 @@ async function sendConfig() {
     const encoder = new TextEncoder();
     try {
         await configCharacteristic.writeValueWithResponse(encoder.encode(csvPayload));
-        alert("Configuration sync payload deployed successfully");
+        alert("Configuration saved.");
     } catch (error) {
-        alert(`Config deployment failure: ${error.message}`);
+        alert(`Save failed: ${error.message}`);
     }
 }
 
@@ -89,10 +85,9 @@ function disconnectBLE() {
 }
 
 function onDisconnected() {
-    statusText.textContent = "Status: Disconnected";
+    statusText.textContent = "Disconnected";
     connectBtn.style.display = 'block';
     disconnectBtn.style.display = 'none';
-    sendTriggerBtn.disabled = true;
     sendConfigBtn.disabled = true;
     
     bleDevice = null;
