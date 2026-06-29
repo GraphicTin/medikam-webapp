@@ -1,20 +1,4 @@
-const SERVICE_UUID = "4faac861-11a1-11ee-be56-0242ac120002";
-const CHARACTERISTIC_UUID = "4faac862-11a1-11ee-be56-0242ac120002"; // Unified Handle
-
-const CMD_CONFIG_UPDATE = 0x01;
-const CMD_TRIGGER_NOTIF = 0x02;
-
-const FIELD_IDS = {
-    'ssid':      0x0A,
-    'password':  0x0B,
-    'token':     0x0C,
-    'user_id':   0x0D,
-    'message':   0x0E,
-    'ble_name':  0x0F,
-    'time_1':    0x10,
-    'time_2':    0x11,
-    'time_3':    0x12
-};
+const ESP32_IP = "10.161.238.248"; // <-- REPLACE WITH YOUR ESP32 IP ADDRESS
 
 document.addEventListener('DOMContentLoaded', () => {
     ['time_1', 'time_2', 'time_3'].forEach(id => {
@@ -92,90 +76,70 @@ function setInterfaceLock(isLocked) {
     if (btnTest) btnTest.disabled = isLocked;
 }
 
-async function executeBleTransaction(binaryBuffer, completionMessage) {
-    setInterfaceLock(true);
-    log('Scanning host wireless adapters for advertising target...');
-    
-    try {
-        const device = await navigator.bluetooth.requestDevice({
-            filters: [{ services: [SERVICE_UUID] }]
-        });
-        
-        const disconnectHandler = () => { log('Link terminated by hardware window boundary.', 'error'); };
-        device.addEventListener('gattserverdisconnected', disconnectHandler);
+async function sendActiveConfig() {
+    const t1 = document.getElementById('time_1').value.trim();
+    const t2 = document.getElementById('time_2').value.trim();
+    const t3 = document.getElementById('time_3').value.trim();
 
-        log('Initializing session handshake...');
-        const server = await device.gatt.connect();
-        
-        const service = await server.getPrimaryService(SERVICE_UUID);
-        const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
-        
-        log(`Streaming single atomic payload byte block (${binaryBuffer.byteLength} bytes)...`);
-        await characteristic.writeValue(binaryBuffer);
-        
-        log(completionMessage, 'success');
-        
-        device.removeEventListener('gattserverdisconnected', disconnectHandler);
-        await device.gatt.disconnect();
-        log('Session closed cleanly.');
+    if (!t1 && !t2 && !t3) {
+        log('No parameters populated. Transmission aborted.', 'warn');
+        return;
+    }
+
+    const timesArray = [t1, t2, t3].filter(t => t.length > 0).join(',');
+
+    const params = new URLSearchParams();
+    params.append('times', timesArray);
+
+    // Append remaining fields if populated
+    ['ssid', 'password', 'token', 'user_id', 'ble_name', 'message'].forEach(id => {
+        const val = document.getElementById(id)?.value.trim();
+        if (val) params.append(id, val);
+    });
+
+    setInterfaceLock(true);
+    log('Initiating Wi-Fi HTTP POST transfer...');
+
+    try {
+        const response = await fetch(`http://${ESP32_IP}/update`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: params.toString()
+        });
+
+        if (response.ok) {
+            log('Parameters synced successfully via Wi-Fi.', 'success');
+        } else {
+            log(`Server error status: ${response.status}`, 'error');
+        }
     } catch (error) {
-        log(`Pipeline exception error: ${error.message}`, 'error');
+        log(`Network transmission failure: ${error.message}`, 'error');
     } finally {
         setInterfaceLock(false);
     }
 }
 
-function sendActiveConfig() {
-    let fieldsToPack = [];
-    let totalPayloadSize = 1; // 1 byte allocated for Command Type ID
+async function triggerHardwareLineNotify() {
+    setInterfaceLock(true);
+    log('Issuing hardware test trigger request...');
 
-    const encoder = new TextEncoder();
-    const timeRegex = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
+    try {
+        const response = await fetch(`http://${ESP32_IP}/test`, {
+            method: 'POST'
+        });
 
-    for (const [elementId, fieldId] of Object.entries(FIELD_IDS)) {
-        const element = document.getElementById(elementId);
-        if (!element) continue;
-
-        const val = element.value.trim();
-        if (val.length > 0) {
-            if (elementId.startsWith('time_') && !timeRegex.test(val)) {
-                log(`Invalid 24h formatting structure on field ID ${fieldId}. Ensure full HH:MM compilation.`, 'error');
-                return;
-            }
-
-            const encodedValue = encoder.encode(val);
-            if (encodedValue.length > 255) {
-                log(`Payload content sizing for element ${elementId} out of range (>255).`, 'error');
-                return;
-            }
-
-            fieldsToPack.push({ id: fieldId, len: encodedValue.length, data: encodedValue });
-            totalPayloadSize += 2 + encodedValue.length; // 1 byte ID + 1 byte Length + Data payload
+        if (response.ok) {
+            log('Hardware alert pipeline execution command issued.', 'success');
+        } else {
+            log(`Server error status: ${response.status}`, 'error');
         }
+    } catch (error) {
+        log(`Network transmission failure: ${error.message}`, 'error');
+    } finally {
+        setInterfaceLock(false);
     }
-
-    if (fieldsToPack.length === 0) {
-        log('No parameters populated. Transmission aborted.', 'warn');
-        return;
-    }
-
-    const packet = new Uint8Array(totalPayloadSize);
-    packet[0] = CMD_CONFIG_UPDATE;
-
-    let offset = 1;
-    for (const field of fieldsToPack) {
-        packet[offset++] = field.id;
-        packet[offset++] = field.len;
-        packet.set(field.data, offset);
-        offset += field.len;
-    }
-
-    executeBleTransaction(packet, 'Target parameters packed into TLV array and synced successfully.');
-}
-
-function triggerHardwareLineNotify() {
-    const packet = new Uint8Array([CMD_TRIGGER_NOTIF]);
-    executeBleTransaction(packet, 'Hardware alert pipeline execution command issued.');
 }
 
 log('Terminal sequence active. Monitoring pipeline ready.');
