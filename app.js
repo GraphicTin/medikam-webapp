@@ -91,34 +91,46 @@ async function sendActiveConfig() {
     const params = new URLSearchParams();
     params.append('times', timesArray);
 
-    // Append remaining fields if populated
     ['ssid', 'password', 'token', 'user_id', 'ble_name', 'message'].forEach(id => {
         const val = document.getElementById(id)?.value.trim();
         if (val) params.append(id, val);
     });
 
     setInterfaceLock(true);
-    log('Initiating Wi-Fi HTTP POST transfer...');
+    
+    const maxAttempts = 12; // Covers the 10-second sleep cycle
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        log(`Sync attempt ${attempt}/${maxAttempts} (Waiting for ESP32 wake window)...`);
+        
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 1000); // 1s timeout per attempt
 
-    try {
-        const response = await fetch(`http://${ESP32_IP}/update`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: params.toString()
-        });
+            const response = await fetch(`http://${ESP32_IP}/update`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: params.toString(),
+                signal: controller.signal
+            });
 
-        if (response.ok) {
-            log('Parameters synced successfully via Wi-Fi.', 'success');
-        } else {
-            log(`Server error status: ${response.status}`, 'error');
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+                log('Parameters synced successfully via Wi-Fi.', 'success');
+                setInterfaceLock(false);
+                return;
+            }
+        } catch (error) {
+            // Suppress network errors during deep sleep and proceed to next retry
         }
-    } catch (error) {
-        log(`Network transmission failure: ${error.message}`, 'error');
-    } finally {
-        setInterfaceLock(false);
+        
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Wait 1.5s before retrying
     }
+
+    log('Network transmission timed out. ESP32 handshake failed.', 'error');
+    setInterfaceLock(false);
 }
 
 async function triggerHardwareLineNotify() {
