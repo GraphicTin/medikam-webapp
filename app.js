@@ -80,57 +80,39 @@ async function sendActiveConfig() {
     const t1 = document.getElementById('time_1').value.trim();
     const t2 = document.getElementById('time_2').value.trim();
     const t3 = document.getElementById('time_3').value.trim();
-
-    if (!t1 && !t2 && !t3) {
-        log('No parameters populated. Transmission aborted.', 'warn');
-        return;
-    }
-
-    const timesArray = [t1, t2, t3].filter(t => t.length > 0).join(',');
+    if (!t1 && !t2 && !t3) return log('No parameters. Aborted.', 'warn');
 
     const params = new URLSearchParams();
-    params.append('times', timesArray);
-
+    params.append('times', [t1, t2, t3].filter(t => t.length > 0).join(','));
     ['ssid', 'password', 'token', 'user_id', 'ble_name', 'message'].forEach(id => {
         const val = document.getElementById(id)?.value.trim();
         if (val) params.append(id, val);
     });
 
+    const payload = new TextEncoder().encode(params.toString());
+    const SERVICE_UUID = '4faac861-11a1-11ee-be56-0242ac120002';
+    const CHAR_UUID = '4faac862-11a1-11ee-be56-0242ac120002';
+
     setInterfaceLock(true);
-    
-    const maxAttempts = 12; // Covers the 10-second sleep cycle
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        log(`Sync attempt ${attempt}/${maxAttempts} (Waiting for ESP32 wake window)...`);
+    try {
+        log('Scanning BLE devices...');
+        const device = await navigator.bluetooth.requestDevice({ filters: [{ services: [SERVICE_UUID] }] });
         
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 1000); // 1s timeout per attempt
-
-            const response = await fetch(`http://${ESP32_IP}/update`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: params.toString(),
-                signal: controller.signal
-            });
-
-            clearTimeout(timeoutId);
-
-            if (response.ok) {
-                log('Parameters synced successfully via Wi-Fi.', 'success');
-                setInterfaceLock(false);
-                return;
-            }
-        } catch (error) {
-            // Suppress network errors during deep sleep and proceed to next retry
-        }
+        log('Connecting...');
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService(SERVICE_UUID);
+        const characteristic = await service.getCharacteristic(CHAR_UUID);
         
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Wait 1.5s before retrying
+        log('Transmitting...');
+        await characteristic.writeValue(payload);
+        
+        log('Success. Disconnecting...', 'success');
+        server.disconnect();
+    } catch (e) {
+        log(`BLE Error: ${e.message}`, 'error');
+    } finally {
+        setInterfaceLock(false);
     }
-
-    log('Network transmission timed out. ESP32 handshake failed.', 'error');
-    setInterfaceLock(false);
 }
 
 async function triggerHardwareLineNotify() {
